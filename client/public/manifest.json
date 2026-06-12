@@ -1,0 +1,20 @@
+{
+  "name": "ZimHub",
+  "short_name": "ZimHub",
+  "description": "Private social platform for Zimbabwean university students",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0F172A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "education"],
+  "lang": "en"
+}

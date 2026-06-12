@@ -1,10 +1,19 @@
 {
-  "name": "server",
+  "name": "zimhub-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "ZimHub API Server",
+  "main": "src/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/app.js",
+    "start": "node src/app.js",
+    "migrate": "node src/config/migrate.js",
+    "seed": "node src/config/seed.js",
+    "migrate:fresh": "node src/config/migrate.js && node src/config/seed.js",
+    "db:reset": "node src/config/reset.js",
+    "seed:posts": "node src/config/seed-posts.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [],
   "author": "",
