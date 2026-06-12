@@ -1,14 +1,15 @@
-const SkeletonCard = () => (
+import useTheme from "../../hooks/useTheme";
+
+const SkeletonCard = ({ c }) => (
   <div
     style={{
-      background: "#ffffff",
+      background: c.bgCard,
       borderRadius: "16px",
-      border: "1px solid #f1f5f9",
+      border: `1px solid ${c.border}`,
       padding: "16px",
       marginBottom: "12px",
     }}
   >
-    {/* Author skeleton */}
     <div
       style={{
         display: "flex",
@@ -17,69 +18,37 @@ const SkeletonCard = () => (
         marginBottom: "14px",
       }}
     >
-      <div
-        style={{
-          width: "40px",
-          height: "40px",
-          borderRadius: "50%",
-          background: "#f1f5f9",
-          animation: "shimmer 1.5s infinite",
-          backgroundSize: "200% 100%",
-          backgroundImage:
-            "linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%)",
-        }}
+      <Shimmer
+        c={c}
+        style={{ width: "40px", height: "40px", borderRadius: "50%" }}
       />
       <div>
-        <div
+        <Shimmer
+          c={c}
           style={{
             width: "120px",
             height: "14px",
             borderRadius: "6px",
-            background: "#f1f5f9",
             marginBottom: "6px",
-            animation: "shimmer 1.5s infinite",
-            backgroundSize: "200% 100%",
-            backgroundImage:
-              "linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%)",
           }}
         />
-        <div
-          style={{
-            width: "80px",
-            height: "10px",
-            borderRadius: "4px",
-            background: "#f1f5f9",
-            animation: "shimmer 1.5s infinite",
-            backgroundSize: "200% 100%",
-            backgroundImage:
-              "linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%)",
-          }}
+        <Shimmer
+          c={c}
+          style={{ width: "80px", height: "10px", borderRadius: "4px" }}
         />
       </div>
     </div>
-
-    {/* Content skeleton */}
-    <div
-      style={{
-        width: "100%",
-        height: "200px",
-        borderRadius: "14px",
-        background: "#f1f5f9",
-        animation: "shimmer 1.5s infinite",
-        backgroundSize: "200% 100%",
-        backgroundImage:
-          "linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%)",
-      }}
+    <Shimmer
+      c={c}
+      style={{ width: "100%", height: "200px", borderRadius: "14px" }}
     />
-
-    {/* Actions skeleton */}
     <div
       style={{
         display: "flex",
         gap: "16px",
         marginTop: "14px",
         paddingTop: "10px",
-        borderTop: "1px solid #f8fafc",
+        borderTop: `1px solid ${c.border}`,
       }}
     >
       {[60, 60, 40].map((w, i) => (
@@ -89,27 +58,40 @@ const SkeletonCard = () => (
             width: `${w}px`,
             height: "24px",
             borderRadius: "6px",
-            background: "#f8fafc",
+            background: c.bgSubtle,
           }}
         />
       ))}
     </div>
-
-    <style>{`
-      @keyframes shimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
-      }
-    `}</style>
   </div>
 );
 
-const FeedSkeleton = ({ count = 3 }) => (
-  <div>
-    {Array.from({ length: count }).map((_, i) => (
-      <SkeletonCard key={i} />
-    ))}
-  </div>
+const Shimmer = ({ style, c }) => (
+  <div
+    style={{
+      ...style,
+      background: `linear-gradient(90deg, ${c.skeletonBase} 0%, ${c.skeletonShine} 50%, ${c.skeletonBase} 100%)`,
+      backgroundSize: "200% 100%",
+      animation: "shimmer 1.5s infinite",
+    }}
+  />
 );
+
+const FeedSkeleton = ({ count = 3 }) => {
+  const { c } = useTheme();
+  return (
+    <div>
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonCard key={i} c={c} />
+      ))}
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 export default FeedSkeleton;

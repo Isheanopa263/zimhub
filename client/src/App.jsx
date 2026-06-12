@@ -12,31 +12,44 @@ import NoticePage from "./pages/NoticePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./pages/admin/AdminPage";
-import DebugImage from "./pages/DebugImage";
 
 import useAuthStore from "./store/authStore";
+import useNotificationStore from "./store/notificationStore";
 import { authApi } from "./api/endpoints/auth.api";
+import { notificationsApi } from "./api/endpoints/notifications.api";
 
 const App = () => {
   const { isAuthenticated, setUser, logout } = useAuthStore();
+  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
 
+  /* Verify token + load initial unread count on app start */
   useEffect(() => {
-    const verifyAuth = async () => {
+    const initialize = async () => {
       if (!isAuthenticated) return;
+
+      // Verify auth
       try {
-        const response = await authApi.getMe();
-        setUser(response.data);
+        const userResp = await authApi.getMe();
+        setUser(userResp.data);
       } catch {
         logout();
+        return;
+      }
+
+      // Load initial unread count
+      try {
+        const countResp = await notificationsApi.getUnreadCount();
+        setUnreadCount(countResp.data?.count || 0);
+      } catch {
+        // silent
       }
     };
-    verifyAuth();
+
+    initialize();
   }, []);
 
   return (
     <Routes>
-      <Route path="/debug" element={<DebugImage />} />
-
       <Route
         path="/login"
         element={

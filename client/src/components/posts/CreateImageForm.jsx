@@ -1,22 +1,22 @@
 import { useState, useRef } from "react";
 import { ImagePlus, X } from "lucide-react";
 import Button from "../ui/Button";
+import useTheme from "../../hooks/useTheme";
 
 const CreateImageForm = ({ onSubmit, loading }) => {
   const [caption, setCaption] = useState("");
   const [preview, setPreview] = useState(null);
   const [file, setFile] = useState(null);
   const fileRef = useRef();
+  const { c } = useTheme();
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
     if (!selected) return;
-
     if (selected.size > 5 * 1024 * 1024) {
       alert("Image must be under 5MB");
       return;
     }
-
     setFile(selected);
     setPreview(URL.createObjectURL(selected));
   };
@@ -37,7 +37,6 @@ const CreateImageForm = ({ onSubmit, loading }) => {
 
   return (
     <div>
-      {/* File input */}
       <input
         ref={fileRef}
         type="file"
@@ -46,7 +45,6 @@ const CreateImageForm = ({ onSubmit, loading }) => {
         onChange={handleFileChange}
       />
 
-      {/* Preview or Upload area */}
       {preview ? (
         <div style={{ position: "relative", marginBottom: "14px" }}>
           <img
@@ -84,39 +82,41 @@ const CreateImageForm = ({ onSubmit, loading }) => {
         <div
           onClick={() => fileRef.current?.click()}
           style={{
-            border: "2px dashed #e2e8f0",
+            border: `2px dashed ${c.borderStrong}`,
             borderRadius: "16px",
             padding: "40px",
             textAlign: "center",
             cursor: "pointer",
             marginBottom: "14px",
             transition: "all 0.15s ease",
+            background: c.bgSubtle,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#3B82F6")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = c.accent)}
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.borderColor = c.borderStrong)
+          }
         >
           <ImagePlus
             size={40}
-            color="#94a3b8"
+            color={c.textMuted}
             style={{ margin: "0 auto 12px" }}
           />
           <p
             style={{
               fontSize: "14px",
               fontWeight: 600,
-              color: "#64748b",
+              color: c.textTer,
               margin: "0 0 4px",
             }}
           >
             Click to upload image
           </p>
-          <p style={{ fontSize: "12px", color: "#94a3b8", margin: 0 }}>
+          <p style={{ fontSize: "12px", color: c.textMuted, margin: 0 }}>
             JPEG, PNG, GIF, WebP — max 5MB
           </p>
         </div>
       )}
 
-      {/* Caption */}
       <textarea
         value={caption}
         onChange={(e) => setCaption(e.target.value)}
@@ -127,16 +127,17 @@ const CreateImageForm = ({ onSubmit, loading }) => {
           width: "100%",
           padding: "12px",
           borderRadius: "12px",
-          border: "2px solid #e2e8f0",
-          background: "#fff",
+          border: `2px solid ${c.borderStrong}`,
+          background: c.bgInput,
+          color: c.text,
           resize: "none",
           fontSize: "14px",
           fontFamily: "Inter, sans-serif",
           outline: "none",
           marginBottom: "14px",
         }}
-        onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
-        onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
+        onFocus={(e) => (e.target.style.borderColor = c.accent)}
+        onBlur={(e) => (e.target.style.borderColor = c.borderStrong)}
       />
 
       <Button

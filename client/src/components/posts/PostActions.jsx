@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
+import useTheme from "../../hooks/useTheme";
 
 const PostActions = ({
   post,
@@ -19,6 +20,7 @@ const PostActions = ({
   likeLoading,
 }) => {
   const { user } = useAuthStore();
+  const { c } = useTheme();
   const [menu, setMenu] = useState(false);
   const [heartPop, setHeartPop] = useState(false);
 
@@ -30,7 +32,6 @@ const PostActions = ({
 
   const handleLikeClick = () => {
     if (likeLoading) return;
-    // Heart pop animation
     setHeartPop(true);
     setTimeout(() => setHeartPop(false), 400);
     onLike?.();
@@ -39,7 +40,6 @@ const PostActions = ({
   const handleShare = async () => {
     const url = `${window.location.origin}/post/${post.id}`;
     const text = post.caption || "Check this out on ZimHub";
-
     if (navigator.share) {
       try {
         await navigator.share({ title: "ZimHub", text, url });
@@ -59,11 +59,10 @@ const PostActions = ({
         justifyContent: "space-between",
         marginTop: "12px",
         paddingTop: "10px",
-        borderTop: "1px solid #f8fafc",
+        borderTop: `1px solid ${c.border}`,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-        {/* Like */}
         <button
           onClick={handleLikeClick}
           disabled={likeLoading}
@@ -77,15 +76,17 @@ const PostActions = ({
             padding: "7px 10px",
             borderRadius: "8px",
             transition: "all 0.15s ease",
-            color: isLiked ? "#ef4444" : "#64748b",
+            color: isLiked ? "#ef4444" : c.textTer,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = c.dangerLight)
+          }
           onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
         >
           <Heart
             size={18}
             fill={isLiked ? "#ef4444" : "none"}
-            color={isLiked ? "#ef4444" : "#64748b"}
+            color={isLiked ? "#ef4444" : c.textTer}
             strokeWidth={2}
             style={{
               transition: "transform 0.2s ease",
@@ -97,14 +98,13 @@ const PostActions = ({
               fontSize: "13px",
               fontWeight: 600,
               fontFamily: "Inter, sans-serif",
-              color: isLiked ? "#ef4444" : "#64748b",
+              color: isLiked ? "#ef4444" : c.textTer,
             }}
           >
             {likeCount}
           </span>
         </button>
 
-        {/* Comment */}
         <button
           onClick={onComment}
           style={{
@@ -116,26 +116,27 @@ const PostActions = ({
             cursor: "pointer",
             padding: "7px 10px",
             borderRadius: "8px",
-            color: "#64748b",
+            color: c.textTer,
             transition: "all 0.15s ease",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f9ff")}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = c.accentLight)
+          }
           onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
         >
-          <MessageCircle size={18} color="#64748b" />
+          <MessageCircle size={18} color={c.textTer} />
           <span
             style={{
               fontSize: "13px",
               fontWeight: 600,
               fontFamily: "Inter, sans-serif",
-              color: "#64748b",
+              color: c.textTer,
             }}
           >
             {commentCount}
           </span>
         </button>
 
-        {/* Share */}
         <button
           onClick={handleShare}
           style={{
@@ -144,18 +145,19 @@ const PostActions = ({
             cursor: "pointer",
             padding: "7px 10px",
             borderRadius: "8px",
-            color: "#64748b",
+            color: c.textTer,
             transition: "all 0.15s ease",
             display: "flex",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f0fdf4")}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = c.successLight)
+          }
           onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
         >
-          <Share2 size={18} color="#64748b" />
+          <Share2 size={18} color={c.textTer} />
         </button>
       </div>
 
-      {/* Owner menu */}
       {canDelete && (
         <div style={{ position: "relative" }}>
           <button
@@ -166,7 +168,7 @@ const PostActions = ({
               cursor: "pointer",
               padding: "6px",
               borderRadius: "8px",
-              color: "#94a3b8",
+              color: c.textMuted,
               display: "flex",
             }}
           >
@@ -185,10 +187,10 @@ const PostActions = ({
                   right: 0,
                   top: "100%",
                   marginTop: "4px",
-                  background: "#ffffff",
+                  background: c.bgCard,
                   borderRadius: "12px",
-                  boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
-                  border: "1px solid #f1f5f9",
+                  boxShadow: c.shadowLg,
+                  border: `1px solid ${c.border}`,
                   padding: "4px",
                   minWidth: "150px",
                   zIndex: 50,
@@ -209,13 +211,13 @@ const PostActions = ({
                     background: "none",
                     cursor: "pointer",
                     borderRadius: "8px",
-                    color: "#ef4444",
+                    color: c.danger,
                     fontSize: "13px",
                     fontWeight: 600,
                     fontFamily: "Inter, sans-serif",
                   }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#fef2f2")
+                    (e.currentTarget.style.background = c.dangerLight)
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "none")

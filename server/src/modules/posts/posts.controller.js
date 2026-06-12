@@ -120,6 +120,35 @@ const deletePost = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/posts/check-new?since=timestamp
+ * Returns count of new posts since timestamp
+ */
+const checkNewPosts = async (req, res, next) => {
+  try {
+    const since = req.query.since;
+    if (!since) {
+      return ApiResponse.success(res, "No timestamp", { count: 0 });
+    }
+
+    const { query } = require("../../config/database");
+    const result = await query(
+      `SELECT COUNT(*)::int AS count FROM posts 
+       WHERE is_deleted = false 
+         AND created_at > $1
+         AND user_id != $2`,
+      [new Date(since), req.user.id],
+    );
+
+    return ApiResponse.success(res, "New posts count", {
+      count: result.rows[0].count,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createImagePost,
   createVideoPost,
@@ -129,4 +158,5 @@ module.exports = {
   getPost,
   getUserPosts,
   deletePost,
+  checkNewPosts,
 };

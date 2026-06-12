@@ -1,4 +1,5 @@
 import { forwardRef, useState } from "react";
+import useTheme from "../../hooks/useTheme";
 
 const Input = forwardRef(
   (
@@ -15,104 +16,53 @@ const Input = forwardRef(
     },
     ref,
   ) => {
+    const { c } = useTheme();
     const [showPassword, setShowPassword] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
 
     const isPassword = type === "password";
     const inputType = isPassword ? (showPassword ? "text" : "password") : type;
 
-    const containerStyle = {
-      marginBottom: "0px",
-      width: "100%",
-    };
-
-    const labelStyle = {
-      display: "block",
-      fontSize: "13px",
-      fontWeight: "600",
-      color: "#0F172A",
-      marginBottom: "6px",
-      fontFamily: "Inter, system-ui, sans-serif",
-    };
-
-    const inputWrapperStyle = {
-      position: "relative",
-      display: "flex",
-      alignItems: "center",
-    };
-
-    const inputStyle = {
-      width: "100%",
-      padding: "12px 16px",
-      paddingLeft: Icon ? "42px" : "16px",
-      paddingRight: isPassword ? "42px" : "16px",
-      borderRadius: "12px",
-      border: `2px solid ${error ? "#fca5a5" : isFocused ? "#3B82F6" : "#e2e8f0"}`,
-      background: error ? "#fef2f2" : "#ffffff",
-      color: "#0F172A",
-      fontSize: "14px",
-      fontFamily: "Inter, system-ui, sans-serif",
-      outline: "none",
-      transition: "all 0.15s ease",
-      boxShadow: isFocused ? "0 0 0 3px rgba(59, 130, 246, 0.1)" : "none",
-    };
-
-    const iconStyle = {
-      position: "absolute",
-      left: "14px",
-      top: "50%",
-      transform: "translateY(-50%)",
-      color: error ? "#f87171" : isFocused ? "#3B82F6" : "#94a3b8",
-      transition: "color 0.15s ease",
-      pointerEvents: "none",
-    };
-
-    const eyeButtonStyle = {
-      position: "absolute",
-      right: "14px",
-      top: "50%",
-      transform: "translateY(-50%)",
-      background: "none",
-      border: "none",
-      color: "#94a3b8",
-      cursor: "pointer",
-      padding: "4px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    };
-
-    const errorStyle = {
-      display: "flex",
-      alignItems: "center",
-      gap: "6px",
-      marginTop: "6px",
-      fontSize: "12px",
-      color: "#ef4444",
-      fontFamily: "Inter, system-ui, sans-serif",
-    };
-
-    const helperStyle = {
-      marginTop: "6px",
-      fontSize: "12px",
-      color: "#94a3b8",
-      fontFamily: "Inter, system-ui, sans-serif",
-    };
-
     return (
-      <div style={containerStyle}>
+      <div style={{ marginBottom: "0px", width: "100%" }}>
         {label && (
-          <label htmlFor={name} style={labelStyle}>
+          <label
+            htmlFor={name}
+            style={{
+              display: "block",
+              fontSize: "13px",
+              fontWeight: 600,
+              color: c.text,
+              marginBottom: "6px",
+              fontFamily: "Inter, system-ui, sans-serif",
+            }}
+          >
             {label}
             {required && (
-              <span style={{ color: "#ef4444", marginLeft: "3px" }}>*</span>
+              <span style={{ color: c.danger, marginLeft: "3px" }}>*</span>
             )}
           </label>
         )}
 
-        <div style={inputWrapperStyle}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
           {Icon && (
-            <div style={iconStyle}>
+            <div
+              style={{
+                position: "absolute",
+                left: "14px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: error ? c.danger : isFocused ? c.accent : c.textMuted,
+                transition: "color 0.15s ease",
+                pointerEvents: "none",
+              }}
+            >
               <Icon size={16} />
             </div>
           )}
@@ -123,7 +73,23 @@ const Input = forwardRef(
             ref={ref}
             type={inputType}
             placeholder={placeholder}
-            style={inputStyle}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              paddingLeft: Icon ? "42px" : "16px",
+              paddingRight: isPassword ? "42px" : "16px",
+              borderRadius: "12px",
+              border: `2px solid ${
+                error ? c.danger : isFocused ? c.accent : c.borderStrong
+              }`,
+              background: error ? c.dangerLight : c.bgInput,
+              color: c.text,
+              fontSize: "14px",
+              fontFamily: "Inter, system-ui, sans-serif",
+              outline: "none",
+              transition: "all 0.15s ease",
+              boxShadow: isFocused ? `0 0 0 3px ${c.accent}20` : "none",
+            }}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             {...props}
@@ -133,7 +99,20 @@ const Input = forwardRef(
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              style={eyeButtonStyle}
+              style={{
+                position: "absolute",
+                right: "14px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                color: c.textMuted,
+                cursor: "pointer",
+                padding: "4px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
               tabIndex={-1}
             >
               {showPassword ? (
@@ -170,7 +149,17 @@ const Input = forwardRef(
         </div>
 
         {error && (
-          <div style={errorStyle}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginTop: "6px",
+              fontSize: "12px",
+              color: c.danger,
+              fontFamily: "Inter, system-ui, sans-serif",
+            }}
+          >
             <svg
               width="14"
               height="14"
@@ -189,7 +178,18 @@ const Input = forwardRef(
           </div>
         )}
 
-        {helperText && !error && <p style={helperStyle}>{helperText}</p>}
+        {helperText && !error && (
+          <p
+            style={{
+              marginTop: "6px",
+              fontSize: "12px",
+              color: c.textMuted,
+              fontFamily: "Inter, system-ui, sans-serif",
+            }}
+          >
+            {helperText}
+          </p>
+        )}
       </div>
     );
   },

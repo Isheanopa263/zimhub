@@ -95,9 +95,12 @@ app.get("/health", (req, res) => {
 
 // ─── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api/v1/auth", require("./modules/auth/auth.routes"));
+app.use("/api/v1/users", require("./modules/users/users.routes")); // ← new
 app.use("/api/v1/posts", require("./modules/posts/posts.routes"));
 app.use("/api/v1/likes", require("./modules/likes/likes.routes"));
 app.use("/api/v1/comments", require("./modules/comments/comments.routes"));
+app.use("/api/v1/notices", require("./modules/notices/notices.routes"));
+app.use("/api/v1/search", require("./modules/search/search.routes")); // ← new
 app.use(
   "/api/v1/announcements",
   require("./modules/announcements/announcements.routes"),
@@ -106,6 +109,7 @@ app.use(
   "/api/v1/notifications",
   require("./modules/notifications/notifications.routes"),
 );
+app.use("/api/v1/admin", require("./modules/admin/admin.routes"));
 
 // ─── Error handling ────────────────────────────────────────────────────────────
 app.use(notFound);

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { BACKGROUND_STYLES } from "./TextPost";
 import Button from "../ui/Button";
+import useTheme from "../../hooks/useTheme";
 
 const CreateTextForm = ({ onSubmit, loading }) => {
   const [content, setContent] = useState("");
   const [backgroundStyle, setBackgroundStyle] = useState("gradient-blue");
+  const { c } = useTheme();
 
   const styles = Object.keys(BACKGROUND_STYLES).filter((s) => s !== "default");
 
@@ -17,7 +19,6 @@ const CreateTextForm = ({ onSubmit, loading }) => {
 
   return (
     <div>
-      {/* Preview */}
       <div
         style={{
           ...selectedStyle,
@@ -53,25 +54,23 @@ const CreateTextForm = ({ onSubmit, loading }) => {
         />
       </div>
 
-      {/* Character count */}
       <div style={{ textAlign: "right", marginBottom: "12px" }}>
         <span
           style={{
             fontSize: "12px",
-            color: content.length > 1800 ? "#ef4444" : "#94a3b8",
+            color: content.length > 1800 ? c.danger : c.textMuted,
           }}
         >
           {content.length}/2000
         </span>
       </div>
 
-      {/* Background picker */}
       <div style={{ marginBottom: "16px" }}>
         <p
           style={{
             fontSize: "13px",
             fontWeight: 600,
-            color: "#64748b",
+            color: c.textTer,
             marginBottom: "8px",
             fontFamily: "Inter, sans-serif",
           }}
@@ -89,8 +88,8 @@ const CreateTextForm = ({ onSubmit, loading }) => {
                 borderRadius: "10px",
                 border:
                   backgroundStyle === key
-                    ? "3px solid #0F172A"
-                    : "2px solid #e2e8f0",
+                    ? `3px solid ${c.text}`
+                    : `2px solid ${c.borderStrong}`,
                 cursor: "pointer",
                 ...BACKGROUND_STYLES[key],
                 padding: 0,

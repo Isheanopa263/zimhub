@@ -1,12 +1,27 @@
 import { useState } from "react";
 import { Link2 } from "lucide-react";
 import Button from "../ui/Button";
+import useTheme from "../../hooks/useTheme";
 
 const CreateLinkForm = ({ onSubmit, loading }) => {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [caption, setCaption] = useState("");
+  const { c } = useTheme();
+
+  const inputStyle = {
+    width: "100%",
+    padding: "12px",
+    borderRadius: "12px",
+    border: `2px solid ${c.borderStrong}`,
+    background: c.bgInput,
+    color: c.text,
+    fontSize: "14px",
+    fontFamily: "Inter, sans-serif",
+    outline: "none",
+    marginBottom: "12px",
+  };
 
   const handleSubmit = () => {
     if (!url.trim()) return;
@@ -18,22 +33,10 @@ const CreateLinkForm = ({ onSubmit, loading }) => {
     });
   };
 
-  const inputStyle = {
-    width: "100%",
-    padding: "12px",
-    borderRadius: "12px",
-    border: "2px solid #e2e8f0",
-    fontSize: "14px",
-    fontFamily: "Inter, sans-serif",
-    outline: "none",
-    marginBottom: "12px",
-    background: "#fff",
-  };
-
   return (
     <div>
       <div style={{ textAlign: "center", marginBottom: "16px" }}>
-        <Link2 size={40} color="#94a3b8" style={{ margin: "0 auto 8px" }} />
+        <Link2 size={40} color={c.textMuted} style={{ margin: "0 auto 8px" }} />
       </div>
 
       <input
@@ -42,8 +45,8 @@ const CreateLinkForm = ({ onSubmit, loading }) => {
         placeholder="Paste URL here *"
         type="url"
         style={inputStyle}
-        onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
-        onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
+        onFocus={(e) => (e.target.style.borderColor = c.accent)}
+        onBlur={(e) => (e.target.style.borderColor = c.borderStrong)}
       />
 
       <input
@@ -51,8 +54,8 @@ const CreateLinkForm = ({ onSubmit, loading }) => {
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Link title (optional)"
         style={inputStyle}
-        onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
-        onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
+        onFocus={(e) => (e.target.style.borderColor = c.accent)}
+        onBlur={(e) => (e.target.style.borderColor = c.borderStrong)}
       />
 
       <input
@@ -60,8 +63,8 @@ const CreateLinkForm = ({ onSubmit, loading }) => {
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Link description (optional)"
         style={inputStyle}
-        onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
-        onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
+        onFocus={(e) => (e.target.style.borderColor = c.accent)}
+        onBlur={(e) => (e.target.style.borderColor = c.borderStrong)}
       />
 
       <textarea
@@ -71,8 +74,8 @@ const CreateLinkForm = ({ onSubmit, loading }) => {
         maxLength={500}
         rows={2}
         style={{ ...inputStyle, resize: "none" }}
-        onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
-        onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
+        onFocus={(e) => (e.target.style.borderColor = c.accent)}
+        onBlur={(e) => (e.target.style.borderColor = c.borderStrong)}
       />
 
       <Button

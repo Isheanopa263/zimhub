@@ -25,22 +25,18 @@ const {
 
 router.use(authenticate);
 
-// ─── Specific routes FIRST (before /:id) ──────────────────────────────────────
-
-// GET /api/v1/posts/feed
+// ─── Specific routes FIRST ────────────────────────────────────────────────────
 router.get(
   "/feed",
-  readLimiter, // generous limit for scrolling
+  readLimiter,
   feedQueryValidator,
   validate,
   postsController.getFeed,
 );
-
-// GET /api/v1/posts/user/:userId
+router.get("/check-new", readLimiter, postsController.checkNewPosts);
 router.get("/user/:userId", readLimiter, postsController.getUserPosts);
 
 // ─── Create Posts ──────────────────────────────────────────────────────────────
-
 router.post(
   "/image",
   createPostLimiter,
@@ -80,7 +76,6 @@ router.post(
 );
 
 // ─── Single Post — MUST be last ───────────────────────────────────────────────
-
 router.get("/:id", postIdValidator, validate, postsController.getPost);
 router.delete("/:id", postIdValidator, validate, postsController.deletePost);
 

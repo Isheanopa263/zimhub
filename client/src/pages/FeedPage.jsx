@@ -1,25 +1,37 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Type, ImagePlus, Video, Link2 } from "lucide-react";
+
 import usePosts from "../hooks/usePosts";
 import useUIStore from "../store/uiStore";
 import useAuthStore from "../store/authStore";
+import useNewPostsCheck from "../hooks/useNewPostsCheck";
+import useTheme from "../hooks/useTheme";
+import { getAvatarUrl } from "../utils/media";
+
 import PostCard from "../components/posts/PostCard";
 import FeedSkeleton from "../components/posts/FeedSkeleton";
 import CreatePostModal from "../components/posts/CreatePostModal";
+import NewPostsIndicator from "../components/notifications/NewPostsIndicator";
+import FilterDropdown from "../components/posts/FilterDropdown";
+import AnnouncementBanner from "../components/announcements/AnnouncementBanner";
 
-const FILTER_TABS = [
-  { key: "all", label: "All" },
-  { key: "text", label: "Text", icon: Type },
-  { key: "image", label: "Photos", icon: ImagePlus },
-  { key: "video", label: "Videos", icon: Video },
-  { key: "link", label: "Links", icon: Link2 },
-];
+const useShowAnnouncements = () => {
+  const [show, setShow] = useState(window.innerWidth < 1280);
+  useEffect(() => {
+    const handler = () => setShow(window.innerWidth < 1280);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return show;
+};
 
 const FeedPage = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const { user } = useAuthStore();
   const { openCreatePost } = useUIStore();
+  const { c } = useTheme();
   const observerRef = useRef(null);
+
+  const showAnnouncements = useShowAnnouncements();
 
   const {
     posts,
@@ -32,8 +44,15 @@ const FeedPage = () => {
     removePost,
   } = usePosts();
 
+  const { newPostsCount, resetNewPosts } = useNewPostsCheck(
+    activeFilter === "all",
+  );
+
   useEffect(() => {
     loadFeed(activeFilter);
+  }, [activeFilter]);
+  useEffect(() => {
+    resetNewPosts();
   }, [activeFilter]);
 
   const lastPostRef = useCallback(
@@ -41,17 +60,22 @@ const FeedPage = () => {
       if (loadingMore) return;
       if (observerRef.current) observerRef.current.disconnect();
       observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          loadMore(activeFilter);
-        }
+        if (entries[0].isIntersecting && hasMore) loadMore(activeFilter);
       });
       if (node) observerRef.current.observe(node);
     },
     [loadingMore, hasMore, activeFilter],
   );
 
+  const handleLoadNewPosts = async () => {
+    resetNewPosts();
+    await loadFeed(activeFilter);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const avatarLetter =
     user?.profile?.full_name?.charAt(0)?.toUpperCase() || "U";
+  const avatarSrc = getAvatarUrl(user?.profile?.avatar_url);
 
   return (
     <div
@@ -60,67 +84,47 @@ const FeedPage = () => {
         paddingBottom: "20px",
       }}
     >
-      {/* Filter tabs */}
       <div
         style={{
           display: "flex",
-          gap: "6px",
-          padding: "12px 0 8px",
-          overflowX: "auto",
-          WebkitOverflowScrolling: "touch",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "14px 0 12px",
+          gap: "12px",
         }}
       >
-        {FILTER_TABS.map(({ key, label, icon: Icon }) => {
-          const active = activeFilter === key;
-          return (
-            <button
-              key={key}
-              onClick={() => setActiveFilter(key)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "8px 16px",
-                borderRadius: "20px",
-                border: "none",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                fontSize: "13px",
-                fontWeight: active ? 700 : 500,
-                fontFamily: "Inter, sans-serif",
-                background: active
-                  ? "linear-gradient(135deg,#3B82F6,#2563eb)"
-                  : "#f1f5f9",
-                color: active ? "#ffffff" : "#64748b",
-                transition: "all 0.15s ease",
-                flexShrink: 0,
-                boxShadow: active ? "0 2px 8px rgba(59,130,246,0.3)" : "none",
-              }}
-            >
-              {Icon && <Icon size={13} />}
-              {label}
-            </button>
-          );
-        })}
+        <h1
+          style={{
+            fontSize: "22px",
+            fontWeight: 800,
+            color: c.text,
+            margin: 0,
+          }}
+        >
+          Your Feed
+        </h1>
+        <FilterDropdown value={activeFilter} onChange={setActiveFilter} />
       </div>
 
-      {/* Create prompt */}
+      {showAnnouncements && <AnnouncementBanner />}
+
       <div
         onClick={openCreatePost}
         style={{
-          background: "#ffffff",
+          background: c.bgCard,
           borderRadius: "16px",
-          border: "1px solid #f1f5f9",
+          border: `1px solid ${c.border}`,
           padding: "12px 16px",
           marginBottom: "12px",
           display: "flex",
           alignItems: "center",
           gap: "12px",
           cursor: "pointer",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          boxShadow: c.shadowSm,
+          transition: "all 0.15s ease",
         }}
+        onMouseEnter={(e) => (e.currentTarget.style.boxShadow = c.shadowMd)}
+        onMouseLeave={(e) => (e.currentTarget.style.boxShadow = c.shadowSm)}
       >
         <div
           style={{
@@ -132,15 +136,28 @@ const FeedPage = () => {
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
+            overflow: "hidden",
           }}
         >
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: "15px" }}>
-            {avatarLetter}
-          </span>
+          {avatarSrc ? (
+            <img
+              src={avatarSrc}
+              alt={user?.profile?.full_name}
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <span style={{ color: "#fff", fontWeight: 700, fontSize: "15px" }}>
+              {avatarLetter}
+            </span>
+          )}
         </div>
 
-        <span style={{ fontSize: "14px", color: "#94a3b8", flex: 1 }}>
-          What's on your mind, {user?.profile?.full_name?.split(" ")[0]}?
+        <span style={{ fontSize: "14px", color: c.textMuted, flex: 1 }}>
+          What's on your mind,{" "}
+          {user?.profile?.full_name?.split(" ")[0] || "friend"}?
         </span>
 
         <div
@@ -159,11 +176,12 @@ const FeedPage = () => {
         </div>
       </div>
 
-      {/* Feed */}
+      <NewPostsIndicator count={newPostsCount} onClick={handleLoadNewPosts} />
+
       {loading ? (
         <FeedSkeleton count={4} />
       ) : posts.length === 0 ? (
-        <EmptyFeed onCreatePost={openCreatePost} filter={activeFilter} />
+        <EmptyFeed onCreatePost={openCreatePost} filter={activeFilter} c={c} />
       ) : (
         <>
           {posts.map((post, index) => {
@@ -175,14 +193,14 @@ const FeedPage = () => {
             );
           })}
 
-          {loadingMore && <LoadingMoreSpinner />}
+          {loadingMore && <LoadingMoreSpinner c={c} />}
 
           {!hasMore && posts.length > 0 && (
             <div
               style={{
                 textAlign: "center",
                 padding: "30px 20px",
-                color: "#cbd5e1",
+                color: c.textFaint,
                 fontSize: "13px",
               }}
             >
@@ -197,69 +215,66 @@ const FeedPage = () => {
   );
 };
 
-const EmptyFeed = ({ onCreatePost, filter }) => (
-  <div style={{ textAlign: "center", padding: "60px 20px" }}>
-    <div style={{ fontSize: "52px", marginBottom: "16px" }}>
-      {filter === "video"
-        ? "🎬"
-        : filter === "image"
-          ? "🖼️"
-          : filter === "link"
-            ? "🔗"
-            : filter === "text"
-              ? "✍️"
-              : "📭"}
+const EmptyFeed = ({ onCreatePost, filter, c }) => {
+  const iconMap = {
+    video: "🎬",
+    image: "🖼️",
+    link: "🔗",
+    text: "✍️",
+    all: "📭",
+  };
+  return (
+    <div style={{ textAlign: "center", padding: "60px 20px" }}>
+      <div style={{ fontSize: "52px", marginBottom: "16px" }}>
+        {iconMap[filter] || iconMap.all}
+      </div>
+      <h3
+        style={{
+          fontSize: "18px",
+          fontWeight: 700,
+          color: c.textTer,
+          margin: "0 0 8px",
+        }}
+      >
+        {filter === "all" ? "No posts yet" : `No ${filter} posts yet`}
+      </h3>
+      <p style={{ fontSize: "14px", color: c.textMuted, margin: "0 0 24px" }}>
+        Be the first to share something!
+      </p>
+      <button
+        onClick={onCreatePost}
+        style={{
+          background: "linear-gradient(135deg,#3B82F6,#2563eb)",
+          color: "#fff",
+          border: "none",
+          padding: "12px 28px",
+          borderRadius: "12px",
+          fontWeight: 700,
+          cursor: "pointer",
+          fontSize: "14px",
+          boxShadow: "0 4px 14px rgba(59,130,246,0.3)",
+        }}
+      >
+        Create Post
+      </button>
     </div>
-    <h3
-      style={{
-        fontSize: "18px",
-        fontWeight: 700,
-        color: "#64748b",
-        margin: "0 0 8px",
-      }}
-    >
-      {filter === "all" ? "No posts yet" : `No ${filter} posts yet`}
-    </h3>
-    <p style={{ fontSize: "14px", color: "#94a3b8", margin: "0 0 24px" }}>
-      Be the first to share something!
-    </p>
-    <button
-      onClick={onCreatePost}
-      style={{
-        background: "linear-gradient(135deg,#3B82F6,#2563eb)",
-        color: "#fff",
-        border: "none",
-        padding: "12px 28px",
-        borderRadius: "12px",
-        fontWeight: 700,
-        cursor: "pointer",
-        fontSize: "14px",
-        boxShadow: "0 4px 14px rgba(59,130,246,0.3)",
-      }}
-    >
-      Create Post
-    </button>
-  </div>
-);
+  );
+};
 
-const LoadingMoreSpinner = () => (
+const LoadingMoreSpinner = ({ c }) => (
   <div style={{ textAlign: "center", padding: "24px" }}>
     <div
       style={{
         width: "28px",
         height: "28px",
-        border: "3px solid #e2e8f0",
-        borderTop: "3px solid #3B82F6",
+        border: `3px solid ${c.border}`,
+        borderTop: `3px solid ${c.accent}`,
         borderRadius: "50%",
         margin: "0 auto",
         animation: "spin 0.8s linear infinite",
       }}
     />
-    <style>{`
-      @keyframes spin {
-        0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
-      }
-    `}</style>
+    <style>{`@keyframes spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }`}</style>
   </div>
 );
 

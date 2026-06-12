@@ -3,6 +3,7 @@ import { X, Type, ImagePlus, Video, Link2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import useUIStore from "../../store/uiStore";
+import useTheme from "../../hooks/useTheme";
 import { postsApi } from "../../api/endpoints/posts.api";
 
 import CreateTextForm from "./CreateTextForm";
@@ -19,6 +20,7 @@ const POST_TYPES = [
 
 const CreatePostModal = ({ onPostCreated }) => {
   const { isCreatePostOpen, closeCreatePost } = useUIStore();
+  const { c } = useTheme();
   const [activeType, setActiveType] = useState("text");
   const [loading, setLoading] = useState(false);
 
@@ -42,7 +44,6 @@ const CreatePostModal = ({ onPostCreated }) => {
           response = await postsApi.createLinkPost(data);
           break;
       }
-
       toast.success("Post created! 🎉");
       onPostCreated?.(response.data);
       closeCreatePost();
@@ -62,19 +63,17 @@ const CreatePostModal = ({ onPostCreated }) => {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={handleClose}
         style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(0,0,0,0.5)",
+          background: "var(--backdrop)",
           backdropFilter: "blur(4px)",
           zIndex: 100,
         }}
       />
 
-      {/* Modal */}
       <div
         style={{
           position: "fixed",
@@ -84,30 +83,29 @@ const CreatePostModal = ({ onPostCreated }) => {
           width: "95%",
           maxWidth: "480px",
           maxHeight: "85vh",
-          background: "#ffffff",
+          background: c.bgCard,
           borderRadius: "20px",
-          boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
+          boxShadow: c.shadowLg,
           zIndex: 101,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
         }}
       >
-        {/* Header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             padding: "16px 20px",
-            borderBottom: "1px solid #f1f5f9",
+            borderBottom: `1px solid ${c.border}`,
           }}
         >
           <h2
             style={{
               fontSize: "17px",
               fontWeight: 800,
-              color: "#0F172A",
+              color: c.text,
               margin: 0,
               fontFamily: "Inter, sans-serif",
             }}
@@ -117,7 +115,7 @@ const CreatePostModal = ({ onPostCreated }) => {
           <button
             onClick={handleClose}
             style={{
-              background: "#f1f5f9",
+              background: c.bgHover,
               border: "none",
               borderRadius: "10px",
               width: "34px",
@@ -126,20 +124,19 @@ const CreatePostModal = ({ onPostCreated }) => {
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: "#64748b",
+              color: c.textTer,
             }}
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Type Selector */}
         <div
           style={{
             display: "flex",
             gap: "6px",
             padding: "12px 20px",
-            borderBottom: "1px solid #f8fafc",
+            borderBottom: `1px solid ${c.border}`,
           }}
         >
           {POST_TYPES.map(({ key, icon: Icon, label, color }) => (
@@ -158,17 +155,20 @@ const CreatePostModal = ({ onPostCreated }) => {
                   activeType === key
                     ? `2px solid ${color}`
                     : "2px solid transparent",
-                background: activeType === key ? `${color}10` : "#f8fafc",
+                background: activeType === key ? `${color}15` : c.bgSubtle,
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
             >
-              <Icon size={18} color={activeType === key ? color : "#94a3b8"} />
+              <Icon
+                size={18}
+                color={activeType === key ? color : c.textMuted}
+              />
               <span
                 style={{
                   fontSize: "11px",
                   fontWeight: activeType === key ? 700 : 500,
-                  color: activeType === key ? color : "#94a3b8",
+                  color: activeType === key ? color : c.textMuted,
                   fontFamily: "Inter, sans-serif",
                 }}
               >
@@ -178,7 +178,6 @@ const CreatePostModal = ({ onPostCreated }) => {
           ))}
         </div>
 
-        {/* Form area */}
         <div style={{ flex: 1, overflow: "auto", padding: "16px 20px" }}>
           {activeType === "text" && (
             <CreateTextForm onSubmit={handleSubmit} loading={loading} />

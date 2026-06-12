@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import useComments from "../../hooks/useComments";
+import useTheme from "../../hooks/useTheme";
 import CommentsList from "./CommentsList";
 import CommentInput from "./CommentInput";
 
 const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
+  const { c } = useTheme();
   const {
     comments,
     loading,
@@ -16,60 +18,44 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
   } = useComments(postId, isOpen);
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = isOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
   }, [isOpen]);
 
-  // Sync count back to PostCard
   useEffect(() => {
     if (onCommentChange) {
-      const totalComments = comments.reduce(
-        (sum, c) => sum + 1 + (c.replyCount || 0),
+      const total = comments.reduce(
+        (sum, x) => sum + 1 + (x.replyCount || 0),
         0,
       );
-      onCommentChange(totalComments);
+      onCommentChange(total);
     }
   }, [comments, onCommentChange]);
 
-  /* Top-level comment */
-  const handleSubmit = async (content) => {
-    await createComment(content, null);
-  };
-
-  /* Reply to a comment */
-  const handleReply = async (parentCommentId, content) => {
-    return await createComment(content, parentCommentId);
-  };
-
-  /* Delete top-level or reply */
-  const handleDelete = async (commentId, wasReply = false, parentId = null) => {
-    await deleteComment(commentId, wasReply, parentId);
-  };
+  const handleSubmit = async (content) => await createComment(content, null);
+  const handleReply = async (parentId, content) =>
+    await createComment(content, parentId);
+  const handleDelete = async (id, wasReply, parentId) =>
+    await deleteComment(id, wasReply, parentId);
 
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(0,0,0,0.5)",
+          background: "var(--backdrop)",
           backdropFilter: "blur(4px)",
           zIndex: 100,
           animation: "fadeIn 0.2s ease",
         }}
       />
 
-      {/* Drawer */}
       <div
         style={{
           position: "fixed",
@@ -78,7 +64,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           right: 0,
           height: "85vh",
           maxHeight: "700px",
-          background: "#ffffff",
+          background: c.bgCard,
           borderRadius: "20px 20px 0 0",
           boxShadow: "0 -10px 50px rgba(0,0,0,0.25)",
           zIndex: 101,
@@ -87,26 +73,24 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           animation: "slideUp 0.3s ease",
         }}
       >
-        {/* Handle */}
         <div
           style={{
             width: "40px",
             height: "4px",
-            background: "#cbd5e1",
+            background: c.borderStrong,
             borderRadius: "4px",
             margin: "10px auto 0",
             flexShrink: 0,
           }}
         />
 
-        {/* Header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             padding: "14px 16px",
-            borderBottom: "1px solid #f1f5f9",
+            borderBottom: `1px solid ${c.border}`,
             flexShrink: 0,
           }}
         >
@@ -114,7 +98,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
             style={{
               fontSize: "16px",
               fontWeight: 800,
-              color: "#0F172A",
+              color: c.text,
               margin: 0,
               fontFamily: "Inter, sans-serif",
             }}
@@ -124,7 +108,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           <button
             onClick={onClose}
             style={{
-              background: "#f1f5f9",
+              background: c.bgHover,
               border: "none",
               borderRadius: "10px",
               width: "32px",
@@ -133,14 +117,13 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: "#64748b",
+              color: c.textTer,
             }}
           >
             <X size={16} />
           </button>
         </div>
 
-        {/* List */}
         <div style={{ flex: 1, overflow: "auto" }}>
           <CommentsList
             comments={comments}
@@ -152,21 +135,18 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           />
         </div>
 
-        {/* Input */}
         <CommentInput
           onSubmit={handleSubmit}
           submitting={submitting}
-          autoFocus={true}
+          autoFocus
         />
       </div>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; } to { opacity: 1; }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp {
           from { transform: translateY(100%); }
-          to   { transform: translateY(0); }
+          to { transform: translateY(0); }
         }
       `}</style>
     </>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trash2, MoreHorizontal } from "lucide-react";
 import useAuthStore from "../../store/authStore";
+import useTheme from "../../hooks/useTheme";
 import { getAvatarUrl } from "../../utils/media";
 
 const timeAgo = (dateString) => {
@@ -21,6 +22,7 @@ const timeAgo = (dateString) => {
 const ReplyItem = ({ reply, onDelete }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { c } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (!reply?.author) return null;
@@ -37,10 +39,9 @@ const ReplyItem = ({ reply, onDelete }) => {
         display: "flex",
         gap: "8px",
         padding: "8px 0",
-        borderBottom: "1px solid #f8fafc",
+        borderBottom: `1px solid ${c.border}`,
       }}
     >
-      {/* Small avatar */}
       <div
         onClick={() => navigate(`/profile/${reply.author.username}`)}
         style={{
@@ -76,17 +77,15 @@ const ReplyItem = ({ reply, onDelete }) => {
         )}
       </div>
 
-      {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            background: "#f8fafc",
+            background: c.bgSubtle,
             borderRadius: "12px",
             padding: "8px 10px",
             position: "relative",
           }}
         >
-          {/* Header */}
           <div
             style={{
               display: "flex",
@@ -100,7 +99,7 @@ const ReplyItem = ({ reply, onDelete }) => {
               style={{
                 fontSize: "12px",
                 fontWeight: 700,
-                color: "#0F172A",
+                color: c.text,
                 cursor: "pointer",
                 fontFamily: "Inter, sans-serif",
               }}
@@ -118,7 +117,7 @@ const ReplyItem = ({ reply, onDelete }) => {
                     cursor: "pointer",
                     padding: "2px",
                     borderRadius: "6px",
-                    color: "#94a3b8",
+                    color: c.textMuted,
                     display: "flex",
                   }}
                 >
@@ -137,10 +136,10 @@ const ReplyItem = ({ reply, onDelete }) => {
                         right: 0,
                         top: "100%",
                         marginTop: "4px",
-                        background: "#ffffff",
+                        background: c.bgCard,
                         borderRadius: "10px",
-                        boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
-                        border: "1px solid #f1f5f9",
+                        boxShadow: c.shadowLg,
+                        border: `1px solid ${c.border}`,
                         padding: "4px",
                         zIndex: 50,
                         minWidth: "120px",
@@ -161,13 +160,13 @@ const ReplyItem = ({ reply, onDelete }) => {
                           background: "none",
                           cursor: "pointer",
                           borderRadius: "6px",
-                          color: "#ef4444",
+                          color: c.danger,
                           fontSize: "12px",
                           fontWeight: 600,
                           fontFamily: "Inter, sans-serif",
                         }}
                         onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "#fef2f2")
+                          (e.currentTarget.style.background = c.dangerLight)
                         }
                         onMouseLeave={(e) =>
                           (e.currentTarget.style.background = "none")
@@ -183,11 +182,10 @@ const ReplyItem = ({ reply, onDelete }) => {
             )}
           </div>
 
-          {/* Text */}
           <p
             style={{
               fontSize: "13px",
-              color: "#0F172A",
+              color: c.text,
               margin: 0,
               lineHeight: 1.45,
               fontFamily: "Inter, sans-serif",
@@ -198,7 +196,6 @@ const ReplyItem = ({ reply, onDelete }) => {
           </p>
         </div>
 
-        {/* Footer */}
         <div
           style={{
             display: "flex",
@@ -211,17 +208,17 @@ const ReplyItem = ({ reply, onDelete }) => {
           <span
             style={{
               fontSize: "10px",
-              color: "#94a3b8",
+              color: c.textMuted,
               fontFamily: "Inter, sans-serif",
             }}
           >
             @{reply.author.username}
           </span>
-          <span style={{ fontSize: "10px", color: "#cbd5e1" }}>·</span>
+          <span style={{ fontSize: "10px", color: c.textFaint }}>·</span>
           <span
             style={{
               fontSize: "10px",
-              color: "#94a3b8",
+              color: c.textMuted,
               fontFamily: "Inter, sans-serif",
             }}
           >

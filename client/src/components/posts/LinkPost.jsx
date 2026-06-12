@@ -1,6 +1,9 @@
 import { ExternalLink } from "lucide-react";
+import useTheme from "../../hooks/useTheme";
 
 const LinkPost = ({ url, title, description, ogImage, caption }) => {
+  const { c } = useTheme();
+
   const domain = (() => {
     try {
       return new URL(url).hostname.replace("www.", "");
@@ -11,12 +14,11 @@ const LinkPost = ({ url, title, description, ogImage, caption }) => {
 
   return (
     <div>
-      {/* Caption above */}
       {caption && (
         <p
           style={{
             fontSize: "15px",
-            color: "#0F172A",
+            color: c.text,
             marginBottom: "10px",
             lineHeight: 1.5,
             fontFamily: "Inter, sans-serif",
@@ -26,7 +28,6 @@ const LinkPost = ({ url, title, description, ogImage, caption }) => {
         </p>
       )}
 
-      {/* Link card */}
       <a
         href={url}
         target="_blank"
@@ -35,26 +36,26 @@ const LinkPost = ({ url, title, description, ogImage, caption }) => {
       >
         <div
           style={{
-            border: "1px solid #e2e8f0",
+            border: `1px solid ${c.borderStrong}`,
             borderRadius: "16px",
             overflow: "hidden",
             transition: "all 0.15s ease",
             cursor: "pointer",
+            background: c.bgCard,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "#3B82F6";
-            e.currentTarget.style.boxShadow = "0 2px 12px rgba(59,130,246,0.1)";
+            e.currentTarget.style.borderColor = c.accent;
+            e.currentTarget.style.boxShadow = c.shadowMd;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "#e2e8f0";
+            e.currentTarget.style.borderColor = c.borderStrong;
             e.currentTarget.style.boxShadow = "none";
           }}
         >
-          {/* OG Image */}
           {ogImage && (
             <div
               style={{
-                background: "#f1f5f9",
+                background: c.bgSubtle,
                 maxHeight: "200px",
                 overflow: "hidden",
               }}
@@ -67,7 +68,6 @@ const LinkPost = ({ url, title, description, ogImage, caption }) => {
             </div>
           )}
 
-          {/* Content */}
           <div style={{ padding: "14px 16px" }}>
             <div
               style={{
@@ -77,11 +77,11 @@ const LinkPost = ({ url, title, description, ogImage, caption }) => {
                 marginBottom: "6px",
               }}
             >
-              <ExternalLink size={12} color="#94a3b8" />
+              <ExternalLink size={12} color={c.textMuted} />
               <span
                 style={{
                   fontSize: "12px",
-                  color: "#94a3b8",
+                  color: c.textMuted,
                   fontFamily: "Inter, sans-serif",
                 }}
               >
@@ -94,7 +94,7 @@ const LinkPost = ({ url, title, description, ogImage, caption }) => {
                 style={{
                   fontSize: "14px",
                   fontWeight: 700,
-                  color: "#0F172A",
+                  color: c.text,
                   margin: "0 0 4px",
                   fontFamily: "Inter, sans-serif",
                   display: "-webkit-box",
@@ -111,7 +111,7 @@ const LinkPost = ({ url, title, description, ogImage, caption }) => {
               <p
                 style={{
                   fontSize: "13px",
-                  color: "#64748b",
+                  color: c.textTer,
                   margin: 0,
                   fontFamily: "Inter, sans-serif",
                   display: "-webkit-box",

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home,
@@ -8,13 +9,16 @@ import {
   LogOut,
   Shield,
   Plus,
-  Settings,
+  Sun,
+  Moon,
 } from "lucide-react";
+
 import useAuthStore from "../../store/authStore";
 import useAuth from "../../hooks/useAuth";
 import useUIStore from "../../store/uiStore";
+import useTheme from "../../hooks/useTheme";
+import { getAvatarUrl } from "../../utils/media";
 
-/* ─── Nav Items Config ─────────────────────────────────────────────────────── */
 const navItems = [
   { to: "/feed", icon: Home, label: "Feed" },
   { to: "/search", icon: Search, label: "Search" },
@@ -23,112 +27,154 @@ const navItems = [
   { to: "/profile", icon: User, label: "My Profile" },
 ];
 
-/* ─── Sidebar NavLink Item ─────────────────────────────────────────────────── */
-const SidebarItem = ({ to, icon: Icon, label, badge, unreadCount = 0 }) => {
-  return (
-    <NavLink to={to} style={{ textDecoration: "none" }}>
-      {({ isActive }) => (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "12px 14px",
-            borderRadius: "14px",
-            background: isActive
-              ? "linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.1) 100%)"
-              : "transparent",
-            color: isActive ? "#3B82F6" : "#64748b",
-            fontWeight: isActive ? "700" : "500",
-            fontSize: "15px",
-            transition: "all 0.15s ease",
-            cursor: "pointer",
-            position: "relative",
-            border: isActive
-              ? "1px solid rgba(59,130,246,0.2)"
-              : "1px solid transparent",
-          }}
-          onMouseEnter={(e) => {
-            if (!isActive) {
-              e.currentTarget.style.background = "#f1f5f9";
-              e.currentTarget.style.color = "#0F172A";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isActive) {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#64748b";
-            }
-          }}
-        >
-          {/* Icon */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <Icon
-              size={20}
-              style={{
-                strokeWidth: isActive ? 2.5 : 2,
-              }}
-            />
-            {/* Notification badge */}
-            {badge && unreadCount > 0 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "-6px",
-                  right: "-6px",
-                  background: "#ef4444",
-                  color: "#fff",
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  minWidth: "18px",
-                  height: "18px",
-                  borderRadius: "9px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "0 4px",
-                  border: "2px solid #ffffff",
-                }}
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </div>
-            )}
-          </div>
+/* ─── Sidebar Nav Item ─────────────────────────────────────────────────────── */
+const SidebarItem = ({ to, icon: Icon, label, badge, unreadCount = 0, c }) => (
+  <NavLink to={to} style={{ textDecoration: "none" }}>
+    {({ isActive }) => (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          padding: "12px 14px",
+          borderRadius: "14px",
+          background: isActive ? c.accentLight : "transparent",
+          color: isActive ? c.accent : c.textTer,
+          fontWeight: isActive ? 700 : 500,
+          fontSize: "15px",
+          transition: "all 0.15s ease",
+          cursor: "pointer",
+          position: "relative",
+          border: isActive
+            ? `1px solid ${c.accent}30`
+            : "1px solid transparent",
+        }}
+        onMouseEnter={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.background = c.bgHover;
+            e.currentTarget.style.color = c.text;
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = c.textTer;
+          }
+        }}
+      >
+        {/* Icon with badge */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <Icon size={20} style={{ strokeWidth: isActive ? 2.5 : 2 }} />
 
-          {/* Label */}
-          <span style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
-            {label}
-          </span>
-
-          {/* Active indicator bar */}
-          {isActive && (
+          {badge && unreadCount > 0 && (
             <div
               style={{
                 position: "absolute",
-                left: 0,
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: "3px",
-                height: "60%",
-                background: "#3B82F6",
-                borderRadius: "0 3px 3px 0",
+                top: "-6px",
+                right: "-6px",
+                background: "#ef4444",
+                color: "#fff",
+                fontSize: "10px",
+                fontWeight: 700,
+                minWidth: "18px",
+                height: "18px",
+                borderRadius: "9px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0 4px",
+                border: `2px solid ${c.bgCard}`,
+                fontFamily: "Inter, sans-serif",
               }}
-            />
+            >
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </div>
           )}
         </div>
+
+        <span style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+          {label}
+        </span>
+
+        {/* Active indicator bar */}
+        {isActive && (
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: "3px",
+              height: "60%",
+              background: c.accent,
+              borderRadius: "0 3px 3px 0",
+            }}
+          />
+        )}
+      </div>
+    )}
+  </NavLink>
+);
+
+/* ─── Avatar Component ─────────────────────────────────────────────────────── */
+const Avatar = ({ src, letter, size = 38, c }) => {
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImg = src && !imgFailed;
+
+  return (
+    <div
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "50%",
+        background: "linear-gradient(135deg, #3B82F6, #8b5cf6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        overflow: "hidden",
+        border: `2px solid ${c.borderStrong}`,
+      }}
+    >
+      {showImg ? (
+        <img
+          src={src}
+          alt="Profile"
+          onError={() => setImgFailed(true)}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      ) : (
+        <span
+          style={{
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: `${Math.floor(size * 0.38)}px`,
+            fontFamily: "Inter, sans-serif",
+          }}
+        >
+          {letter}
+        </span>
       )}
-    </NavLink>
+    </div>
   );
 };
 
-/* ─── Main Sidebar ─────────────────────────────────────────────────────────── */
+/* ─── Main Sidebar ────────────────────────────────────────────────────────── */
 const Sidebar = ({ unreadNotifications = 0 }) => {
   const { user } = useAuthStore();
   const { logout } = useAuth();
   const { openCreatePost } = useUIStore();
+  const { isDark, toggleTheme, c } = useTheme();
   const navigate = useNavigate();
 
   const isAdmin = user?.role === "admin";
+  const avatarSrc = getAvatarUrl(user?.profile?.avatar_url);
+  const letter = user?.profile?.full_name?.charAt(0)?.toUpperCase() || "U";
 
   return (
     <aside
@@ -138,11 +184,11 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
         height: "100vh",
         position: "sticky",
         top: 0,
-        background: "#ffffff",
-        borderRight: "1px solid #f1f5f9",
+        background: c.bgCard,
+        borderRight: `1px solid ${c.border}`,
         display: "flex",
         flexDirection: "column",
-        padding: "0",
+        padding: 0,
         overflowY: "auto",
         overflowX: "hidden",
         zIndex: 40,
@@ -152,7 +198,7 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
       <div
         style={{
           padding: "24px 20px 16px",
-          borderBottom: "1px solid #f8fafc",
+          borderBottom: `1px solid ${c.border}`,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -188,8 +234,8 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
               letterSpacing: "-0.5px",
             }}
           >
-            <span style={{ color: "#0F172A" }}>Zim</span>
-            <span style={{ color: "#3B82F6" }}>Hub</span>
+            <span style={{ color: c.text }}>Zim</span>
+            <span style={{ color: c.accentText }}>Hub</span>
           </span>
         </div>
       </div>
@@ -209,28 +255,27 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
             key={item.to}
             {...item}
             unreadCount={item.badge ? unreadNotifications : 0}
+            c={c}
           />
         ))}
 
-        {/* Admin Panel Link */}
         {isAdmin && (
           <>
             <div
               style={{
                 height: "1px",
-                background: "#f1f5f9",
+                background: c.border,
                 margin: "8px 0",
               }}
             />
-            <SidebarItem to="/admin" icon={Shield} label="Admin Panel" />
+            <SidebarItem to="/admin" icon={Shield} label="Admin Panel" c={c} />
           </>
         )}
 
-        {/* Divider */}
         <div
           style={{
             height: "1px",
-            background: "#f1f5f9",
+            background: c.border,
             margin: "8px 0",
           }}
         />
@@ -246,7 +291,7 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
             borderRadius: "14px",
             background: "linear-gradient(135deg, #3B82F6 0%, #2563eb 100%)",
             color: "#ffffff",
-            fontWeight: "700",
+            fontWeight: 700,
             fontSize: "15px",
             border: "none",
             cursor: "pointer",
@@ -273,7 +318,7 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
       <div
         style={{
           padding: "12px",
-          borderTop: "1px solid #f1f5f9",
+          borderTop: `1px solid ${c.border}`,
         }}
       >
         {/* Profile row */}
@@ -289,53 +334,19 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
             transition: "background 0.15s ease",
             marginBottom: "4px",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = c.bgHover)}
           onMouseLeave={(e) =>
             (e.currentTarget.style.background = "transparent")
           }
         >
-          {/* Avatar */}
-          <div
-            style={{
-              width: "38px",
-              height: "38px",
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #3B82F6, #8b5cf6)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              overflow: "hidden",
-              border: "2px solid #e2e8f0",
-            }}
-          >
-            {user?.profile?.avatar_url ? (
-              <img
-                src={user.profile.avatar_url}
-                alt={user.profile.full_name}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            ) : (
-              <span
-                style={{
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: "14px",
-                  fontFamily: "Inter, sans-serif",
-                }}
-              >
-                {user?.profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
-              </span>
-            )}
-          </div>
+          <Avatar src={avatarSrc} letter={letter} size={38} c={c} />
 
-          {/* Name & username */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <p
               style={{
                 fontSize: "14px",
                 fontWeight: 700,
-                color: "#0F172A",
+                color: c.text,
                 margin: 0,
                 fontFamily: "Inter, sans-serif",
                 overflow: "hidden",
@@ -348,7 +359,7 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
             <p
               style={{
                 fontSize: "12px",
-                color: "#94a3b8",
+                color: c.textMuted,
                 margin: 0,
                 fontFamily: "Inter, sans-serif",
                 overflow: "hidden",
@@ -360,19 +371,18 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
             </p>
           </div>
 
-          {/* Admin badge */}
           {isAdmin && (
             <div
               style={{
-                background: "rgba(59,130,246,0.1)",
-                color: "#3B82F6",
+                background: c.accentLight,
+                color: c.accent,
                 fontSize: "10px",
                 fontWeight: 700,
                 padding: "2px 8px",
                 borderRadius: "20px",
                 flexShrink: 0,
                 fontFamily: "Inter, sans-serif",
-                border: "1px solid rgba(59,130,246,0.2)",
+                border: `1px solid ${c.accent}30`,
               }}
             >
               ADMIN
@@ -380,7 +390,75 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
           )}
         </div>
 
-        {/* Logout button */}
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "10px",
+            padding: "9px 10px",
+            borderRadius: "10px",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            width: "100%",
+            fontFamily: "Inter, system-ui, sans-serif",
+            transition: "all 0.15s ease",
+            marginBottom: "2px",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = c.bgHover)}
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "transparent")
+          }
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {isDark ? (
+              <Moon size={16} color={c.accent} fill={c.accent} />
+            ) : (
+              <Sun size={16} color={c.warning} />
+            )}
+            <span
+              style={{
+                fontSize: "14px",
+                color: c.text,
+                fontWeight: 500,
+              }}
+            >
+              {isDark ? "Dark Mode" : "Light Mode"}
+            </span>
+          </div>
+
+          {/* Toggle switch */}
+          <div
+            style={{
+              width: "32px",
+              height: "18px",
+              borderRadius: "20px",
+              background: isDark ? c.accent : "#cbd5e1",
+              position: "relative",
+              flexShrink: 0,
+              transition: "background 0.2s ease",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: "2px",
+                left: isDark ? "16px" : "2px",
+                width: "14px",
+                height: "14px",
+                borderRadius: "50%",
+                background: "#fff",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                transition: "left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            />
+          </div>
+        </button>
+
+        {/* Logout */}
         <button
           onClick={logout}
           style={{
@@ -390,7 +468,7 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
             padding: "9px 10px",
             borderRadius: "10px",
             background: "transparent",
-            color: "#94a3b8",
+            color: c.textMuted,
             fontSize: "14px",
             fontWeight: 500,
             border: "none",
@@ -400,12 +478,12 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
             transition: "all 0.15s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#fef2f2";
-            e.currentTarget.style.color = "#ef4444";
+            e.currentTarget.style.background = c.dangerLight;
+            e.currentTarget.style.color = c.danger;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = "#94a3b8";
+            e.currentTarget.style.color = c.textMuted;
           }}
         >
           <LogOut size={16} />

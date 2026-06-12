@@ -7,8 +7,10 @@ import VideoPost from "./VideoPost";
 import LinkPost from "./LinkPost";
 import CommentsDrawer from "../comments/CommentsDrawer";
 import useLike from "../../hooks/useLike";
+import useTheme from "../../hooks/useTheme";
 
 const PostCard = ({ post, onDelete }) => {
+  const { c } = useTheme();
   if (!post) return null;
 
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -23,14 +25,6 @@ const PostCard = ({ post, onDelete }) => {
 
   const handleLike = () => toggleLike(post.id);
 
-  const handleCommentCountChange = (newCountOrUpdater) => {
-    if (typeof newCountOrUpdater === "function") {
-      setCommentCount(newCountOrUpdater);
-    } else {
-      setCommentCount(newCountOrUpdater);
-    }
-  };
-
   const renderContent = () => {
     switch (post.type) {
       case "text":
@@ -40,26 +34,23 @@ const PostCard = ({ post, onDelete }) => {
             backgroundStyle={post.text?.backgroundStyle || "default"}
           />
         );
-
       case "image":
         return (
           <div>
-            {post.caption && <Caption text={post.caption} />}
+            {post.caption && <Caption text={post.caption} c={c} />}
             <ImagePost imageUrl={post.image?.url} caption={post.caption} />
           </div>
         );
-
       case "video":
         return (
           <div>
-            {post.caption && <Caption text={post.caption} />}
+            {post.caption && <Caption text={post.caption} c={c} />}
             <VideoPost
               videoUrl={post.video?.url}
               thumbnailUrl={post.video?.thumbnailUrl}
             />
           </div>
         );
-
       case "link":
         return (
           <LinkPost
@@ -70,7 +61,6 @@ const PostCard = ({ post, onDelete }) => {
             caption={post.caption}
           />
         );
-
       default:
         return null;
     }
@@ -80,12 +70,12 @@ const PostCard = ({ post, onDelete }) => {
     <>
       <article
         style={{
-          background: "#ffffff",
+          background: c.bgCard,
           borderRadius: "16px",
-          border: "1px solid #f1f5f9",
+          border: `1px solid ${c.border}`,
           padding: "16px",
           marginBottom: "12px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          boxShadow: c.shadowSm,
         }}
       >
         <PostAuthor author={post.author} createdAt={post.createdAt} />
@@ -108,17 +98,17 @@ const PostCard = ({ post, onDelete }) => {
         isOpen={commentsOpen}
         onClose={() => setCommentsOpen(false)}
         postId={post.id}
-        onCommentChange={handleCommentCountChange}
+        onCommentChange={setCommentCount}
       />
     </>
   );
 };
 
-const Caption = ({ text }) => (
+const Caption = ({ text, c }) => (
   <p
     style={{
       fontSize: "15px",
-      color: "#0F172A",
+      color: c.text,
       marginTop: 0,
       marginBottom: "10px",
       lineHeight: 1.55,

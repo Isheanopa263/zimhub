@@ -1,3 +1,5 @@
+import useTheme from "../../hooks/useTheme";
+
 const Button = ({
   children,
   variant = "primary",
@@ -10,12 +12,14 @@ const Button = ({
   onClick,
   ...props
 }) => {
+  const { c } = useTheme();
+
   const baseStyles = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "8px",
-    fontWeight: "600",
+    fontWeight: 600,
     borderRadius: "12px",
     cursor: disabled || isLoading ? "not-allowed" : "pointer",
     transition: "all 0.15s ease",
@@ -33,13 +37,13 @@ const Button = ({
       boxShadow: "0 4px 14px rgba(59, 130, 246, 0.35)",
     },
     secondary: {
-      background: "#f1f5f9",
-      color: "#0F172A",
+      background: c.bgHover,
+      color: c.text,
       boxShadow: "none",
     },
     ghost: {
       background: "transparent",
-      color: "#0F172A",
+      color: c.text,
       boxShadow: "none",
     },
     danger: {
@@ -49,8 +53,8 @@ const Button = ({
     },
     outline: {
       background: "transparent",
-      color: "#3B82F6",
-      border: "2px solid #3B82F6",
+      color: c.accent,
+      border: `2px solid ${c.accent}`,
       boxShadow: "none",
     },
   };
@@ -121,7 +125,7 @@ const Button = ({
   );
 };
 
-// Add spinner animation via a style tag
+// Add spinner animation
 if (typeof document !== "undefined") {
   const styleId = "zimhub-button-styles";
   if (!document.getElementById(styleId)) {
@@ -130,7 +134,7 @@ if (typeof document !== "undefined") {
     style.textContent = `
       @keyframes spin {
         from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+        to   { transform: rotate(360deg); }
       }
     `;
     document.head.appendChild(style);

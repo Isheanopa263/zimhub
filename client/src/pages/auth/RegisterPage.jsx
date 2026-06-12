@@ -15,6 +15,7 @@ import {
 
 import useAuth from "../../hooks/useAuth";
 import useAuthStore from "../../store/authStore";
+import useTheme from "../../hooks/useTheme";
 import Logo from "../../components/ui/Logo";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -57,8 +58,8 @@ const registerSchema = z
     path: ["confirmPassword"],
   });
 
-/* ─── Password Strength ──────────────────────────────────────────── */
-const PasswordStrength = ({ password }) => {
+/* Password Strength Indicator */
+const PasswordStrength = ({ password, c }) => {
   if (!password) return null;
 
   const checks = [
@@ -82,7 +83,7 @@ const PasswordStrength = ({ password }) => {
               height: "4px",
               flex: 1,
               borderRadius: "4px",
-              background: i < strength ? colors[strength - 1] : "#e2e8f0",
+              background: i < strength ? colors[strength - 1] : c.borderStrong,
               transition: "all 0.3s ease",
             }}
           />
@@ -104,11 +105,11 @@ const PasswordStrength = ({ password }) => {
   );
 };
 
-/* ─── Register Page ────────────────────────────────────────────── */
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const { register: registerUser, isLoading } = useAuth();
+  const { c, isDark } = useTheme();
 
   const {
     register,
@@ -146,8 +147,9 @@ const RegisterPage = () => {
         alignItems: "center",
         justifyContent: "center",
         padding: "20px",
-        background:
-          "linear-gradient(135deg, #0F172A 0%, #1e293b 50%, #0F172A 100%)",
+        background: isDark
+          ? "linear-gradient(135deg, #050810 0%, #0A0F1C 50%, #050810 100%)"
+          : "linear-gradient(135deg, #0F172A 0%, #1e293b 50%, #0F172A 100%)",
         position: "relative",
         overflow: "hidden",
         fontFamily: "Inter, system-ui, sans-serif",
@@ -213,10 +215,11 @@ const RegisterPage = () => {
         {/* Card */}
         <div
           style={{
-            background: "#ffffff",
+            background: c.bgCard,
             borderRadius: "24px",
             padding: "36px 32px",
             boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+            border: `1px solid ${c.border}`,
           }}
         >
           <div style={{ marginBottom: "24px" }}>
@@ -227,14 +230,20 @@ const RegisterPage = () => {
             <h1
               style={{
                 fontSize: "26px",
-                fontWeight: "800",
-                color: "#0F172A",
+                fontWeight: 800,
+                color: c.text,
                 margin: 0,
               }}
             >
               Join ZimHub 🎓
             </h1>
-            <p style={{ color: "#64748b", fontSize: "14px", marginTop: "6px" }}>
+            <p
+              style={{
+                color: c.textTer,
+                fontSize: "14px",
+                marginTop: "6px",
+              }}
+            >
               Create your student account
             </p>
           </div>
@@ -288,7 +297,7 @@ const RegisterPage = () => {
                   required
                   {...register("password")}
                 />
-                <PasswordStrength password={watchedPassword} />
+                <PasswordStrength password={watchedPassword} c={c} />
               </div>
 
               <Input
@@ -309,13 +318,13 @@ const RegisterPage = () => {
                   style={{
                     display: "block",
                     fontSize: "13px",
-                    fontWeight: "600",
-                    color: "#0F172A",
+                    fontWeight: 600,
+                    color: c.text,
                     marginBottom: "6px",
                   }}
                 >
                   Bio{" "}
-                  <span style={{ color: "#94a3b8", fontWeight: 400 }}>
+                  <span style={{ color: c.textMuted, fontWeight: 400 }}>
                     (optional)
                   </span>
                 </label>
@@ -326,7 +335,7 @@ const RegisterPage = () => {
                       position: "absolute",
                       left: "14px",
                       top: "14px",
-                      color: "#94a3b8",
+                      color: c.textMuted,
                       pointerEvents: "none",
                     }}
                   />
@@ -341,9 +350,9 @@ const RegisterPage = () => {
                       paddingTop: "12px",
                       paddingBottom: "12px",
                       borderRadius: "12px",
-                      border: `2px solid ${errors.bio ? "#fca5a5" : "#e2e8f0"}`,
-                      background: errors.bio ? "#fef2f2" : "#ffffff",
-                      color: "#0F172A",
+                      border: `2px solid ${errors.bio ? c.danger : c.borderStrong}`,
+                      background: errors.bio ? c.dangerLight : c.bgInput,
+                      color: c.text,
                       fontSize: "14px",
                       fontFamily: "Inter, system-ui, sans-serif",
                       resize: "none",
@@ -351,12 +360,11 @@ const RegisterPage = () => {
                       transition: "all 0.15s ease",
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#3B82F6";
-                      e.target.style.boxShadow =
-                        "0 0 0 3px rgba(59, 130, 246, 0.1)";
+                      e.target.style.borderColor = c.accent;
+                      e.target.style.boxShadow = `0 0 0 3px ${c.accent}20`;
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e2e8f0";
+                      e.target.style.borderColor = c.borderStrong;
                       e.target.style.boxShadow = "none";
                     }}
                     {...register("bio")}
@@ -366,7 +374,7 @@ const RegisterPage = () => {
                   <p
                     style={{
                       fontSize: "12px",
-                      color: "#ef4444",
+                      color: c.danger,
                       marginTop: "6px",
                     }}
                   >
@@ -386,7 +394,7 @@ const RegisterPage = () => {
             <p
               style={{
                 fontSize: "12px",
-                color: "#94a3b8",
+                color: c.textMuted,
                 textAlign: "center",
                 marginTop: "16px",
               }}
@@ -397,7 +405,7 @@ const RegisterPage = () => {
                 style={{
                   background: "none",
                   border: "none",
-                  color: "#3B82F6",
+                  color: c.accent,
                   cursor: "pointer",
                   fontSize: "12px",
                   fontFamily: "inherit",
@@ -413,7 +421,7 @@ const RegisterPage = () => {
             style={{
               textAlign: "center",
               fontSize: "14px",
-              color: "#64748b",
+              color: c.textTer,
               marginTop: "24px",
             }}
           >
@@ -421,8 +429,8 @@ const RegisterPage = () => {
             <Link
               to="/login"
               style={{
-                color: "#3B82F6",
-                fontWeight: "600",
+                color: c.accent,
+                fontWeight: 600,
                 textDecoration: "none",
               }}
             >

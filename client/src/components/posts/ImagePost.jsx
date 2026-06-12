@@ -1,29 +1,29 @@
 import { useState } from "react";
 import { getImageUrl } from "../../utils/media";
+import useTheme from "../../hooks/useTheme";
 
 const ImagePost = ({ imageUrl, caption }) => {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const { c } = useTheme();
 
   const src = getImageUrl(imageUrl);
-
-  // No URL → don't render anything
   if (!src) return null;
 
   if (error) {
     return (
       <div
         style={{
-          background: "#f8fafc",
+          background: c.bgSubtle,
           borderRadius: "14px",
           padding: "32px 20px",
           textAlign: "center",
-          border: "1px dashed #e2e8f0",
+          border: `1px dashed ${c.borderStrong}`,
           fontFamily: "Inter, sans-serif",
         }}
       >
         <div style={{ fontSize: "28px", marginBottom: "8px" }}>🖼️</div>
-        <p style={{ color: "#94a3b8", fontSize: "13px", margin: 0 }}>
+        <p style={{ color: c.textMuted, fontSize: "13px", margin: 0 }}>
           Image could not be loaded
         </p>
       </div>
@@ -35,7 +35,7 @@ const ImagePost = ({ imageUrl, caption }) => {
       style={{
         borderRadius: "14px",
         overflow: "hidden",
-        background: "#f1f5f9",
+        background: c.skeletonBase,
         position: "relative",
         minHeight: loaded ? "auto" : "240px",
       }}
@@ -45,8 +45,7 @@ const ImagePost = ({ imageUrl, caption }) => {
           style={{
             position: "absolute",
             inset: 0,
-            background:
-              "linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%)",
+            background: `linear-gradient(90deg, ${c.skeletonBase} 0%, ${c.skeletonShine} 50%, ${c.skeletonBase} 100%)`,
             backgroundSize: "200% 100%",
             animation: "imgShimmer 1.5s infinite",
           }}

@@ -1,4 +1,5 @@
 import CommentItem from "./CommentItem";
+import useTheme from "../../hooks/useTheme";
 
 const CommentsList = ({
   comments,
@@ -8,11 +9,13 @@ const CommentsList = ({
   hasMore,
   onLoadMore,
 }) => {
+  const { c } = useTheme();
+
   if (loading && comments.length === 0) {
     return (
       <div style={{ padding: "20px" }}>
         {[1, 2, 3].map((i) => (
-          <SkeletonComment key={i} />
+          <SkeletonComment key={i} c={c} />
         ))}
       </div>
     );
@@ -31,14 +34,14 @@ const CommentsList = ({
         <p
           style={{
             fontSize: "14px",
-            color: "#64748b",
+            color: c.textTer,
             margin: "0 0 4px",
             fontWeight: 600,
           }}
         >
           No comments yet
         </p>
-        <p style={{ fontSize: "12px", color: "#94a3b8", margin: 0 }}>
+        <p style={{ fontSize: "12px", color: c.textMuted, margin: 0 }}>
           Be the first to share your thoughts
         </p>
       </div>
@@ -66,7 +69,7 @@ const CommentsList = ({
             padding: "12px",
             background: "transparent",
             border: "none",
-            color: "#3B82F6",
+            color: c.accent,
             fontSize: "13px",
             fontWeight: 600,
             cursor: loading ? "wait" : "pointer",
@@ -81,15 +84,14 @@ const CommentsList = ({
   );
 };
 
-const SkeletonComment = () => (
+const SkeletonComment = ({ c }) => (
   <div style={{ display: "flex", gap: "10px", padding: "12px 0" }}>
     <div
       style={{
         width: "36px",
         height: "36px",
         borderRadius: "50%",
-        background:
-          "linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%)",
+        background: `linear-gradient(90deg, ${c.skeletonBase}, ${c.skeletonShine}, ${c.skeletonBase})`,
         backgroundSize: "200% 100%",
         animation: "commentShimmer 1.5s infinite",
         flexShrink: 0,
@@ -100,8 +102,7 @@ const SkeletonComment = () => (
         style={{
           height: "60px",
           borderRadius: "14px",
-          background:
-            "linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%)",
+          background: `linear-gradient(90deg, ${c.skeletonBase}, ${c.skeletonShine}, ${c.skeletonBase})`,
           backgroundSize: "200% 100%",
           animation: "commentShimmer 1.5s infinite",
         }}
@@ -109,8 +110,8 @@ const SkeletonComment = () => (
     </div>
     <style>{`
       @keyframes commentShimmer {
-        0%   { background-position: -200% 0; }
-        100% { background-position:  200% 0; }
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
       }
     `}</style>
   </div>

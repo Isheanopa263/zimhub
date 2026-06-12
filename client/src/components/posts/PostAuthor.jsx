@@ -1,16 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { getAvatarUrl } from "../../utils/media";
+import useTheme from "../../hooks/useTheme";
 
 const timeAgo = (dateString) => {
   if (!dateString) return "";
   const diff = Date.now() - new Date(dateString).getTime();
   const seconds = Math.floor(diff / 1000);
-
   if (seconds < 60) return "just now";
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-
   return new Date(dateString).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -19,6 +18,7 @@ const timeAgo = (dateString) => {
 
 const PostAuthor = ({ author, createdAt }) => {
   const navigate = useNavigate();
+  const { c } = useTheme();
 
   if (!author) return null;
 
@@ -34,7 +34,6 @@ const PostAuthor = ({ author, createdAt }) => {
         marginBottom: "12px",
       }}
     >
-      {/* Avatar */}
       <div
         onClick={() => navigate(`/profile/${author.username}`)}
         style={{
@@ -48,7 +47,7 @@ const PostAuthor = ({ author, createdAt }) => {
           cursor: "pointer",
           flexShrink: 0,
           overflow: "hidden",
-          border: "2px solid #f1f5f9",
+          border: `2px solid ${c.border}`,
         }}
       >
         {avatarSrc ? (
@@ -74,14 +73,13 @@ const PostAuthor = ({ author, createdAt }) => {
         )}
       </div>
 
-      {/* Name + time */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <span
           onClick={() => navigate(`/profile/${author.username}`)}
           style={{
             fontSize: "14px",
             fontWeight: 700,
-            color: "#0F172A",
+            color: c.text,
             cursor: "pointer",
             fontFamily: "Inter, sans-serif",
             display: "block",
@@ -97,17 +95,17 @@ const PostAuthor = ({ author, createdAt }) => {
           <span
             style={{
               fontSize: "12px",
-              color: "#94a3b8",
+              color: c.textMuted,
               fontFamily: "Inter, sans-serif",
             }}
           >
             @{author.username}
           </span>
-          <span style={{ fontSize: "12px", color: "#e2e8f0" }}>·</span>
+          <span style={{ fontSize: "12px", color: c.textFaint }}>·</span>
           <span
             style={{
               fontSize: "12px",
-              color: "#94a3b8",
+              color: c.textMuted,
               fontFamily: "Inter, sans-serif",
             }}
           >

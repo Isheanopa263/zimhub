@@ -7,6 +7,7 @@ import { Mail, Lock, ArrowRight } from "lucide-react";
 
 import useAuth from "../../hooks/useAuth";
 import useAuthStore from "../../store/authStore";
+import useTheme from "../../hooks/useTheme";
 import Logo from "../../components/ui/Logo";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -23,6 +24,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const { login, isLoading } = useAuth();
+  const { c, isDark } = useTheme();
 
   const {
     register,
@@ -49,8 +51,9 @@ const LoginPage = () => {
         alignItems: "center",
         justifyContent: "center",
         padding: "20px",
-        background:
-          "linear-gradient(135deg, #0F172A 0%, #1e293b 50%, #0F172A 100%)",
+        background: isDark
+          ? "linear-gradient(135deg, #050810 0%, #0A0F1C 50%, #050810 100%)"
+          : "linear-gradient(135deg, #0F172A 0%, #1e293b 50%, #0F172A 100%)",
         position: "relative",
         overflow: "hidden",
         fontFamily: "Inter, system-ui, sans-serif",
@@ -95,13 +98,14 @@ const LoginPage = () => {
       >
         <div
           style={{
-            background: "#ffffff",
+            background: c.bgCard,
             borderRadius: "24px",
             padding: "40px 32px",
             boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+            border: `1px solid ${c.border}`,
           }}
         >
-          {/* Logo section */}
+          {/* Logo */}
           <div
             style={{
               display: "flex",
@@ -113,7 +117,7 @@ const LoginPage = () => {
             <Logo size="lg" />
             <p
               style={{
-                color: "#94a3b8",
+                color: c.textTer,
                 fontSize: "14px",
                 marginTop: "12px",
                 textAlign: "center",
@@ -128,8 +132,8 @@ const LoginPage = () => {
             <h1
               style={{
                 fontSize: "26px",
-                fontWeight: "800",
-                color: "#0F172A",
+                fontWeight: 800,
+                color: c.text,
                 margin: 0,
               }}
             >
@@ -137,7 +141,7 @@ const LoginPage = () => {
             </h1>
             <p
               style={{
-                color: "#64748b",
+                color: c.textTer,
                 fontSize: "14px",
                 marginTop: "6px",
               }}
@@ -189,9 +193,9 @@ const LoginPage = () => {
                 style={{
                   background: "none",
                   border: "none",
-                  color: "#3B82F6",
+                  color: c.accent,
                   fontSize: "13px",
-                  fontWeight: "600",
+                  fontWeight: 600,
                   cursor: "pointer",
                   fontFamily: "Inter, system-ui, sans-serif",
                 }}
@@ -218,17 +222,17 @@ const LoginPage = () => {
               margin: "28px 0",
             }}
           >
-            <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+            <div style={{ flex: 1, height: "1px", background: c.border }} />
             <span
               style={{
                 fontSize: "12px",
-                color: "#94a3b8",
+                color: c.textMuted,
                 whiteSpace: "nowrap",
               }}
             >
               Don't have an account?
             </span>
-            <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+            <div style={{ flex: 1, height: "1px", background: c.border }} />
           </div>
 
           {/* Register link */}

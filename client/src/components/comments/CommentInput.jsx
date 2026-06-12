@@ -1,23 +1,22 @@
 import { useState, useRef, useEffect } from "react";
 import { Send } from "lucide-react";
 import useAuthStore from "../../store/authStore";
+import useTheme from "../../hooks/useTheme";
 import { getAvatarUrl } from "../../utils/media";
 
 const CommentInput = ({ onSubmit, submitting, autoFocus = false }) => {
   const [content, setContent] = useState("");
   const { user } = useAuthStore();
+  const { c } = useTheme();
   const textareaRef = useRef();
 
   const letter = user?.profile?.full_name?.charAt(0)?.toUpperCase() || "U";
   const avatarSrc = getAvatarUrl(user?.profile?.avatar_url);
 
   useEffect(() => {
-    if (autoFocus && textareaRef.current) {
-      textareaRef.current.focus();
-    }
+    if (autoFocus && textareaRef.current) textareaRef.current.focus();
   }, [autoFocus]);
 
-  // Auto-resize textarea
   const handleChange = (e) => {
     setContent(e.target.value);
     const ta = textareaRef.current;
@@ -31,16 +30,11 @@ const CommentInput = ({ onSubmit, submitting, autoFocus = false }) => {
     e?.preventDefault();
     const text = content.trim();
     if (!text || submitting) return;
-
     try {
       await onSubmit(text);
       setContent("");
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
-    } catch {
-      // Error handled in hook
-    }
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+    } catch {}
   };
 
   const handleKeyDown = (e) => {
@@ -61,13 +55,12 @@ const CommentInput = ({ onSubmit, submitting, autoFocus = false }) => {
         alignItems: "flex-end",
         gap: "10px",
         padding: "12px 16px",
-        background: "#ffffff",
-        borderTop: "1px solid #f1f5f9",
+        background: c.bgCard,
+        borderTop: `1px solid ${c.border}`,
         position: "sticky",
         bottom: 0,
       }}
     >
-      {/* Avatar */}
       <div
         style={{
           width: "34px",
@@ -101,17 +94,16 @@ const CommentInput = ({ onSubmit, submitting, autoFocus = false }) => {
         )}
       </div>
 
-      {/* Input area */}
       <div
         style={{
           flex: 1,
-          background: "#f8fafc",
+          background: c.bgSubtle,
           borderRadius: "20px",
           padding: "8px 12px",
           display: "flex",
           alignItems: "flex-end",
           gap: "8px",
-          border: "1px solid #f1f5f9",
+          border: `1px solid ${c.border}`,
         }}
       >
         <textarea
@@ -131,7 +123,7 @@ const CommentInput = ({ onSubmit, submitting, autoFocus = false }) => {
             outline: "none",
             fontSize: "14px",
             fontFamily: "Inter, sans-serif",
-            color: "#0F172A",
+            color: c.text,
             minHeight: "20px",
             maxHeight: "100px",
             lineHeight: 1.5,
@@ -139,12 +131,11 @@ const CommentInput = ({ onSubmit, submitting, autoFocus = false }) => {
           }}
         />
 
-        {/* Char count */}
         {isNearLimit && (
           <span
             style={{
               fontSize: "10px",
-              color: charCount >= 500 ? "#ef4444" : "#f59e0b",
+              color: charCount >= 500 ? c.danger : c.warning,
               fontFamily: "Inter, sans-serif",
               alignSelf: "flex-end",
               paddingBottom: "4px",
@@ -155,7 +146,6 @@ const CommentInput = ({ onSubmit, submitting, autoFocus = false }) => {
         )}
       </div>
 
-      {/* Send button */}
       <button
         type="submit"
         disabled={!content.trim() || submitting}
@@ -165,13 +155,13 @@ const CommentInput = ({ onSubmit, submitting, autoFocus = false }) => {
           borderRadius: "50%",
           background: content.trim()
             ? "linear-gradient(135deg,#3B82F6,#2563eb)"
-            : "#e2e8f0",
+            : c.borderStrong,
           border: "none",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           cursor: content.trim() ? "pointer" : "not-allowed",
-          color: content.trim() ? "#ffffff" : "#94a3b8",
+          color: content.trim() ? "#ffffff" : c.textMuted,
           flexShrink: 0,
           transition: "all 0.15s ease",
           boxShadow: content.trim() ? "0 2px 8px rgba(59,130,246,0.3)" : "none",

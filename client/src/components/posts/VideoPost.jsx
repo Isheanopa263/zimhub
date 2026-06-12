@@ -1,26 +1,24 @@
 import { useState, useRef } from "react";
 import { Play, Volume2, VolumeX } from "lucide-react";
 import { getVideoUrl } from "../../utils/media";
+import useTheme from "../../hooks/useTheme";
 
 const VideoPost = ({ videoUrl, thumbnailUrl }) => {
   const videoRef = useRef(null);
   const [isPlaying, setPlaying] = useState(false);
   const [isMuted, setMuted] = useState(true);
   const [error, setError] = useState(false);
+  const { c } = useTheme();
 
   const src = getVideoUrl(videoUrl);
   const thumb = getVideoUrl(thumbnailUrl);
 
-  // No video URL — don't render
   if (!src) return null;
 
   const togglePlay = () => {
     if (!videoRef.current) return;
-    if (isPlaying) {
-      videoRef.current.pause();
-    } else {
-      videoRef.current.play().catch(() => {});
-    }
+    if (isPlaying) videoRef.current.pause();
+    else videoRef.current.play().catch(() => {});
   };
 
   const toggleMute = (e) => {
@@ -34,20 +32,16 @@ const VideoPost = ({ videoUrl, thumbnailUrl }) => {
     return (
       <div
         style={{
-          background: "#f8fafc",
+          background: c.bgSubtle,
           borderRadius: "14px",
           padding: "32px 20px",
           textAlign: "center",
-          border: "1px dashed #e2e8f0",
+          border: `1px dashed ${c.borderStrong}`,
           fontFamily: "Inter, sans-serif",
         }}
       >
-        <span
-          style={{ fontSize: "28px", display: "block", marginBottom: "8px" }}
-        >
-          🎬
-        </span>
-        <p style={{ color: "#94a3b8", fontSize: "13px", margin: 0 }}>
+        <div style={{ fontSize: "28px", marginBottom: "8px" }}>🎬</div>
+        <p style={{ color: c.textMuted, fontSize: "13px", margin: 0 }}>
           Video could not be loaded
         </p>
       </div>
@@ -59,7 +53,7 @@ const VideoPost = ({ videoUrl, thumbnailUrl }) => {
       style={{
         borderRadius: "14px",
         overflow: "hidden",
-        background: "#0f172a",
+        background: "#000",
         position: "relative",
         cursor: "pointer",
       }}
@@ -84,7 +78,6 @@ const VideoPost = ({ videoUrl, thumbnailUrl }) => {
         }}
       />
 
-      {/* Play button overlay */}
       {!isPlaying && (
         <div
           style={{
@@ -118,7 +111,6 @@ const VideoPost = ({ videoUrl, thumbnailUrl }) => {
         </div>
       )}
 
-      {/* Mute toggle */}
       <button
         onClick={toggleMute}
         style={{

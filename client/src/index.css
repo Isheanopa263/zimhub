@@ -2,6 +2,107 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── CSS Variables for Light & Dark themes ──────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-app: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #f8fafc;
+  --bg-hover: #f1f5f9;
+  --bg-active: #e2e8f0;
+  --bg-input: #ffffff;
+  --bg-input-focus: #ffffff;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
+  --text-muted: #94a3b8;
+  --text-faint: #cbd5e1;
+  --text-inverse: #ffffff;
+
+  /* Borders */
+  --border-default: #f1f5f9;
+  --border-strong: #e2e8f0;
+  --border-focus: #3b82f6;
+
+  /* Brand */
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-light: #eff6ff;
+  --accent-text: #2563eb;
+
+  /* Status */
+  --success: #10b981;
+  --success-light: #f0fdf4;
+  --warning: #f59e0b;
+  --warning-light: #fffbeb;
+  --danger: #ef4444;
+  --danger-light: #fef2f2;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+
+  /* Special */
+  --backdrop: rgba(0, 0, 0, 0.5);
+  --skeleton-base: #f1f5f9;
+  --skeleton-shine: #e2e8f0;
+}
+
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-app: #0a0f1c;
+  --bg-card: #131a2b;
+  --bg-elevated: #1a2333;
+  --bg-subtle: #1a2333;
+  --bg-hover: #1f2a3d;
+  --bg-active: #2a3548;
+  --bg-input: #1a2333;
+  --bg-input-focus: #1f2a3d;
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-muted: #64748b;
+  --text-faint: #475569;
+  --text-inverse: #0f172a;
+
+  /* Borders */
+  --border-default: #1f2a3d;
+  --border-strong: #2a3548;
+  --border-focus: #60a5fa;
+
+  /* Brand */
+  --accent: #60a5fa;
+  --accent-hover: #3b82f6;
+  --accent-light: rgba(96, 165, 250, 0.12);
+  --accent-text: #60a5fa;
+
+  /* Status */
+  --success: #34d399;
+  --success-light: rgba(52, 211, 153, 0.12);
+  --warning: #fbbf24;
+  --warning-light: rgba(251, 191, 36, 0.12);
+  --danger: #f87171;
+  --danger-light: rgba(248, 113, 113, 0.12);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+  /* Special */
+  --backdrop: rgba(0, 0, 0, 0.7);
+  --skeleton-base: #1a2333;
+  --skeleton-shine: #2a3548;
+}
+
+/* ─── Base styles ────────────────────────────────────────────────────────── */
 * {
   margin: 0;
   padding: 0;
@@ -20,13 +121,36 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+/* Smooth theme transitions for common elements */
+button,
+input,
+textarea,
+select,
+a,
+div,
+article,
+section,
+aside,
+header,
+nav {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -34,6 +158,26 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--border-strong);
   border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Selection color */
+::selection {
+  background: var(--accent);
+  color: white;
+}
+
+/* Form autofill — keep theme consistent */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-input) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  transition: background-color 9999s ease-in-out 0s;
 }

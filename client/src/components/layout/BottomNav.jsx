@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { Home, Search, Bell, User, ClipboardList } from "lucide-react";
-import useUIStore from "../../store/uiStore";
+import useTheme from "../../hooks/useTheme";
 
 const navItems = [
   { to: "/feed", icon: Home, label: "Feed" },
@@ -11,6 +11,8 @@ const navItems = [
 ];
 
 const BottomNav = ({ unreadNotifications = 0 }) => {
+  const { c } = useTheme();
+
   return (
     <nav
       style={{
@@ -18,14 +20,14 @@ const BottomNav = ({ unreadNotifications = 0 }) => {
         bottom: 0,
         left: 0,
         right: 0,
-        background: "#ffffff",
-        borderTop: "1px solid #f1f5f9",
+        background: c.bgCard,
+        borderTop: `1px solid ${c.border}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-around",
         padding: "8px 0 calc(8px + env(safe-area-inset-bottom))",
         zIndex: 50,
-        boxShadow: "0 -4px 20px rgba(0,0,0,0.06)",
+        boxShadow: c.shadowMd,
       }}
     >
       {navItems.map(({ to, icon: Icon, label, badge }) => (
@@ -42,7 +44,6 @@ const BottomNav = ({ unreadNotifications = 0 }) => {
                 position: "relative",
               }}
             >
-              {/* Icon container */}
               <div
                 style={{
                   position: "relative",
@@ -52,16 +53,15 @@ const BottomNav = ({ unreadNotifications = 0 }) => {
                   alignItems: "center",
                   justifyContent: "center",
                   borderRadius: "12px",
-                  background: isActive ? "rgba(59,130,246,0.1)" : "transparent",
+                  background: isActive ? c.accentLight : "transparent",
                   transition: "all 0.15s ease",
                 }}
               >
                 <Icon
                   size={22}
                   strokeWidth={isActive ? 2.5 : 1.8}
-                  color={isActive ? "#3B82F6" : "#94a3b8"}
+                  color={isActive ? c.accent : c.textMuted}
                 />
-                {/* Badge */}
                 {badge && unreadNotifications > 0 && (
                   <div
                     style={{
@@ -79,7 +79,7 @@ const BottomNav = ({ unreadNotifications = 0 }) => {
                       alignItems: "center",
                       justifyContent: "center",
                       padding: "0 3px",
-                      border: "2px solid #ffffff",
+                      border: `2px solid ${c.bgCard}`,
                       fontFamily: "Inter, sans-serif",
                     }}
                   >
@@ -88,12 +88,11 @@ const BottomNav = ({ unreadNotifications = 0 }) => {
                 )}
               </div>
 
-              {/* Label */}
               <span
                 style={{
                   fontSize: "10px",
                   fontWeight: isActive ? 700 : 500,
-                  color: isActive ? "#3B82F6" : "#94a3b8",
+                  color: isActive ? c.accent : c.textMuted,
                   fontFamily: "Inter, system-ui, sans-serif",
                   letterSpacing: "0.2px",
                 }}

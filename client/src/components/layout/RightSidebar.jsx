@@ -1,19 +1,24 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Megaphone, ChevronRight, Wifi, WifiOff } from "lucide-react";
+
 import api from "../../api/axios";
+import useTheme from "../../hooks/useTheme";
 
 /* ─── Announcement Card ────────────────────────────────────────────────────── */
-const AnnouncementCard = ({ announcement }) => {
+const AnnouncementCard = ({ announcement, c, isDark }) => {
   const [expanded, setExpanded] = useState(false);
   const isLong = announcement.content?.length > 100;
+
+  const cardBg = isDark
+    ? `linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(37,99,235,0.08) 100%)`
+    : `linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(37,99,235,0.03) 100%)`;
 
   return (
     <div
       style={{
-        background:
-          "linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(37,99,235,0.03) 100%)",
-        border: "1px solid rgba(59,130,246,0.15)",
+        background: cardBg,
+        border: `1px solid ${c.accent}25`,
         borderRadius: "14px",
         padding: "14px",
         marginBottom: "10px",
@@ -47,7 +52,7 @@ const AnnouncementCard = ({ announcement }) => {
             style={{
               fontSize: "13px",
               fontWeight: 700,
-              color: "#0F172A",
+              color: c.text,
               margin: 0,
               fontFamily: "Inter, sans-serif",
               overflow: "hidden",
@@ -60,7 +65,7 @@ const AnnouncementCard = ({ announcement }) => {
           <p
             style={{
               fontSize: "10px",
-              color: "#94a3b8",
+              color: c.textMuted,
               margin: 0,
               fontFamily: "Inter, sans-serif",
             }}
@@ -74,10 +79,10 @@ const AnnouncementCard = ({ announcement }) => {
       <p
         style={{
           fontSize: "13px",
-          color: "#475569",
+          color: c.textSec,
           margin: 0,
           fontFamily: "Inter, sans-serif",
-          lineHeight: "1.5",
+          lineHeight: 1.5,
           overflow: expanded ? "visible" : "hidden",
           display: expanded ? "block" : "-webkit-box",
           WebkitLineClamp: expanded ? "none" : 3,
@@ -93,7 +98,7 @@ const AnnouncementCard = ({ announcement }) => {
           style={{
             background: "none",
             border: "none",
-            color: "#3B82F6",
+            color: c.accent,
             fontSize: "12px",
             fontWeight: 600,
             cursor: "pointer",
@@ -109,7 +114,7 @@ const AnnouncementCard = ({ announcement }) => {
 };
 
 /* ─── Online Status ────────────────────────────────────────────────────────── */
-const OnlineStatus = () => {
+const OnlineStatus = ({ c }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -131,20 +136,20 @@ const OnlineStatus = () => {
         gap: "8px",
         padding: "10px 14px",
         borderRadius: "12px",
-        background: isOnline ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
-        border: `1px solid ${isOnline ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+        background: isOnline ? c.successLight : c.dangerLight,
+        border: `1px solid ${isOnline ? c.success : c.danger}30`,
       }}
     >
       {isOnline ? (
-        <Wifi size={15} color="#22c55e" />
+        <Wifi size={15} color={c.success} />
       ) : (
-        <WifiOff size={15} color="#ef4444" />
+        <WifiOff size={15} color={c.danger} />
       )}
       <span
         style={{
           fontSize: "12px",
           fontWeight: 600,
-          color: isOnline ? "#16a34a" : "#dc2626",
+          color: isOnline ? c.success : c.danger,
           fontFamily: "Inter, sans-serif",
         }}
       >
@@ -155,7 +160,7 @@ const OnlineStatus = () => {
 };
 
 /* ─── Quick Links ──────────────────────────────────────────────────────────── */
-const QuickLinks = () => {
+const QuickLinks = ({ c }) => {
   const navigate = useNavigate();
 
   const links = [
@@ -180,7 +185,7 @@ const QuickLinks = () => {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            color: "#475569",
+            color: c.textSec,
             fontSize: "13px",
             fontWeight: 500,
             fontFamily: "Inter, system-ui, sans-serif",
@@ -188,12 +193,12 @@ const QuickLinks = () => {
             marginBottom: "2px",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#f1f5f9";
-            e.currentTarget.style.color = "#0F172A";
+            e.currentTarget.style.background = c.bgHover;
+            e.currentTarget.style.color = c.text;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = "#475569";
+            e.currentTarget.style.color = c.textSec;
           }}
         >
           <span>{label}</span>
@@ -204,8 +209,9 @@ const QuickLinks = () => {
   );
 };
 
-/* ─── Right Sidebar ─────────────────────────────────────────────────────────── */
+/* ─── Right Sidebar ────────────────────────────────────────────────────────── */
 const RightSidebar = () => {
+  const { c, isDark } = useTheme();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -215,13 +221,11 @@ const RightSidebar = () => {
         const res = await api.get("/announcements?limit=3");
         setAnnouncements(res.data?.data || []);
       } catch {
-        // Silently fail — announcements are non-critical
         setAnnouncements([]);
       } finally {
         setLoading(false);
       }
     };
-
     fetchAnnouncements();
   }, []);
 
@@ -238,9 +242,10 @@ const RightSidebar = () => {
         display: "flex",
         flexDirection: "column",
         gap: "20px",
+        background: c.bg,
       }}
     >
-      {/* ── Announcements ── */}
+      {/* Announcements */}
       <section>
         <div
           style={{
@@ -254,7 +259,7 @@ const RightSidebar = () => {
             style={{
               fontSize: "13px",
               fontWeight: 700,
-              color: "#0F172A",
+              color: c.text,
               margin: 0,
               textTransform: "uppercase",
               letterSpacing: "0.5px",
@@ -266,7 +271,6 @@ const RightSidebar = () => {
         </div>
 
         {loading ? (
-          /* Skeleton */
           <div
             style={{ display: "flex", flexDirection: "column", gap: "10px" }}
           >
@@ -276,29 +280,33 @@ const RightSidebar = () => {
                 style={{
                   height: "80px",
                   borderRadius: "14px",
-                  background:
-                    "linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%)",
+                  background: `linear-gradient(90deg, ${c.skeletonBase} 0%, ${c.skeletonShine} 50%, ${c.skeletonBase} 100%)`,
                   backgroundSize: "200% 100%",
-                  animation: "shimmer 1.5s infinite",
+                  animation: "rightShimmer 1.5s infinite",
                 }}
               />
             ))}
           </div>
         ) : announcements.length > 0 ? (
           announcements.map((a) => (
-            <AnnouncementCard key={a.id} announcement={a} />
+            <AnnouncementCard
+              key={a.id}
+              announcement={a}
+              c={c}
+              isDark={isDark}
+            />
           ))
         ) : (
           <div
             style={{
               padding: "20px",
               textAlign: "center",
-              color: "#94a3b8",
+              color: c.textMuted,
               fontSize: "13px",
               fontFamily: "Inter, sans-serif",
-              background: "#f8fafc",
+              background: c.bgSubtle,
               borderRadius: "14px",
-              border: "1px dashed #e2e8f0",
+              border: `1px dashed ${c.borderStrong}`,
             }}
           >
             No announcements yet
@@ -306,13 +314,13 @@ const RightSidebar = () => {
         )}
       </section>
 
-      {/* ── Quick Links ── */}
+      {/* Quick Links */}
       <section>
         <h3
           style={{
             fontSize: "13px",
             fontWeight: 700,
-            color: "#0F172A",
+            color: c.text,
             margin: "0 0 8px",
             textTransform: "uppercase",
             letterSpacing: "0.5px",
@@ -321,20 +329,20 @@ const RightSidebar = () => {
         >
           🔗 Quick Links
         </h3>
-        <QuickLinks />
+        <QuickLinks c={c} />
       </section>
 
-      {/* ── Status ── */}
+      {/* Status */}
       <section>
-        <OnlineStatus />
+        <OnlineStatus c={c} />
       </section>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <section style={{ marginTop: "auto" }}>
         <p
           style={{
             fontSize: "11px",
-            color: "#cbd5e1",
+            color: c.textFaint,
             textAlign: "center",
             fontFamily: "Inter, sans-serif",
             lineHeight: 1.6,
@@ -346,11 +354,10 @@ const RightSidebar = () => {
         </p>
       </section>
 
-      {/* Shimmer keyframes */}
       <style>{`
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
+        @keyframes rightShimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position:  200% 0; }
         }
       `}</style>
     </aside>

@@ -4,6 +4,8 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import App from "./App";
+import { registerServiceWorker } from "./utils/pwa";
+import { applyTheme } from "./store/themeStore";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -16,6 +18,24 @@ const queryClient = new QueryClient({
   },
 });
 
+/* Apply theme BEFORE React renders to avoid flash of light theme */
+(() => {
+  try {
+    const stored = JSON.parse(localStorage.getItem("zimhub-theme"));
+    const theme =
+      stored?.state?.theme ||
+      (window.matchMedia?.("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light");
+    applyTheme(theme);
+  } catch {
+    applyTheme("light");
+  }
+})();
+
+// Register service worker
+registerServiceWorker();
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -26,10 +46,25 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           toastOptions={{
             duration: 3000,
             style: {
-              background: "#0F172A",
-              color: "#F8FAFC",
-              borderRadius: "10px",
+              background: "var(--bg-card)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-default)",
+              borderRadius: "12px",
               fontSize: "14px",
+              padding: "12px 16px",
+              boxShadow: "var(--shadow-lg)",
+            },
+            success: {
+              iconTheme: {
+                primary: "var(--accent)",
+                secondary: "white",
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: "var(--danger)",
+                secondary: "white",
+              },
             },
           }}
         />

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import useReplies from "../../hooks/useReplies";
+import useTheme from "../../hooks/useTheme";
 import { getAvatarUrl } from "../../utils/media";
 import ReplyItem from "./ReplyItem";
 
@@ -30,6 +31,7 @@ const timeAgo = (dateString) => {
 const CommentItem = ({ comment, onDelete, onReply }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { c } = useTheme();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
@@ -58,32 +60,24 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
   const avatarSrc = getAvatarUrl(comment.author.avatarUrl);
   const hasReplies = comment.replyCount > 0;
 
-  /* Focus reply input when shown */
   useEffect(() => {
-    if (showReplyBox && replyInputRef.current) {
-      replyInputRef.current.focus();
-    }
+    if (showReplyBox && replyInputRef.current) replyInputRef.current.focus();
   }, [showReplyBox]);
 
   const handleToggleReplies = async () => {
     const next = !showReplies;
     setShowReplies(next);
-    if (next && !repliesLoaded) {
-      await loadReplies();
-    }
+    if (next && !repliesLoaded) await loadReplies();
   };
 
   const handleSubmitReply = async (e) => {
     e?.preventDefault();
     const text = replyContent.trim();
     if (!text || submittingReply) return;
-
     setSubmittingReply(true);
     try {
-      // onReply returns the new reply object
       const newReply = await onReply(comment.id, text);
       if (newReply) {
-        // Make sure replies are loaded then append the new one
         if (!repliesLoaded) await loadReplies();
         addReply(newReply);
         setShowReplies(true);
@@ -91,7 +85,6 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
       setReplyContent("");
       setShowReplyBox(false);
     } catch {
-      // toast already shown in hook
     } finally {
       setSubmittingReply(false);
     }
@@ -103,10 +96,8 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
   };
 
   return (
-    <div style={{ padding: "12px 0", borderBottom: "1px solid #f8fafc" }}>
-      {/* Main comment row */}
+    <div style={{ padding: "12px 0", borderBottom: `1px solid ${c.border}` }}>
       <div style={{ display: "flex", gap: "10px" }}>
-        {/* Avatar */}
         <div
           onClick={() => navigate(`/profile/${comment.author.username}`)}
           style={{
@@ -142,17 +133,15 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
           )}
         </div>
 
-        {/* Content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              background: "#f8fafc",
+              background: c.bgSubtle,
               borderRadius: "14px",
               padding: "10px 12px",
               position: "relative",
             }}
           >
-            {/* Header */}
             <div
               style={{
                 display: "flex",
@@ -166,7 +155,7 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
                 style={{
                   fontSize: "13px",
                   fontWeight: 700,
-                  color: "#0F172A",
+                  color: c.text,
                   cursor: "pointer",
                   fontFamily: "Inter, sans-serif",
                 }}
@@ -184,7 +173,7 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
                       cursor: "pointer",
                       padding: "2px",
                       borderRadius: "6px",
-                      color: "#94a3b8",
+                      color: c.textMuted,
                       display: "flex",
                     }}
                   >
@@ -203,10 +192,10 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
                           right: 0,
                           top: "100%",
                           marginTop: "4px",
-                          background: "#ffffff",
+                          background: c.bgCard,
                           borderRadius: "10px",
-                          boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
-                          border: "1px solid #f1f5f9",
+                          boxShadow: c.shadowLg,
+                          border: `1px solid ${c.border}`,
                           padding: "4px",
                           zIndex: 50,
                           minWidth: "120px",
@@ -227,13 +216,13 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
                             background: "none",
                             cursor: "pointer",
                             borderRadius: "6px",
-                            color: "#ef4444",
+                            color: c.danger,
                             fontSize: "12px",
                             fontWeight: 600,
                             fontFamily: "Inter, sans-serif",
                           }}
                           onMouseEnter={(e) =>
-                            (e.currentTarget.style.background = "#fef2f2")
+                            (e.currentTarget.style.background = c.dangerLight)
                           }
                           onMouseLeave={(e) =>
                             (e.currentTarget.style.background = "none")
@@ -249,11 +238,10 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
               )}
             </div>
 
-            {/* Comment text */}
             <p
               style={{
                 fontSize: "14px",
-                color: "#0F172A",
+                color: c.text,
                 margin: 0,
                 lineHeight: 1.5,
                 fontFamily: "Inter, sans-serif",
@@ -264,7 +252,6 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
             </p>
           </div>
 
-          {/* Footer with actions */}
           <div
             style={{
               display: "flex",
@@ -278,24 +265,23 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
             <span
               style={{
                 fontSize: "11px",
-                color: "#94a3b8",
+                color: c.textMuted,
                 fontFamily: "Inter, sans-serif",
               }}
             >
               @{comment.author.username}
             </span>
-            <span style={{ fontSize: "11px", color: "#cbd5e1" }}>·</span>
+            <span style={{ fontSize: "11px", color: c.textFaint }}>·</span>
             <span
               style={{
                 fontSize: "11px",
-                color: "#94a3b8",
+                color: c.textMuted,
                 fontFamily: "Inter, sans-serif",
               }}
             >
               {timeAgo(comment.createdAt)}
             </span>
 
-            {/* Reply button */}
             <button
               onClick={() => setShowReplyBox(!showReplyBox)}
               style={{
@@ -306,7 +292,7 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
                 border: "none",
                 cursor: "pointer",
                 padding: "2px 4px",
-                color: "#3B82F6",
+                color: c.accent,
                 fontSize: "11px",
                 fontWeight: 700,
                 fontFamily: "Inter, sans-serif",
@@ -316,7 +302,6 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
               Reply
             </button>
 
-            {/* View / hide replies */}
             {hasReplies && (
               <button
                 onClick={handleToggleReplies}
@@ -328,7 +313,7 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
                   border: "none",
                   cursor: "pointer",
                   padding: "2px 4px",
-                  color: "#3B82F6",
+                  color: c.accent,
                   fontSize: "11px",
                   fontWeight: 700,
                   fontFamily: "Inter, sans-serif",
@@ -336,8 +321,7 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
               >
                 {showReplies ? (
                   <>
-                    <ChevronUp size={12} />
-                    Hide replies
+                    <ChevronUp size={12} /> Hide replies
                   </>
                 ) : (
                   <>
@@ -353,7 +337,6 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
         </div>
       </div>
 
-      {/* Reply input box */}
       {showReplyBox && (
         <form
           onSubmit={handleSubmitReply}
@@ -368,13 +351,13 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
           <div
             style={{
               flex: 1,
-              background: "#f8fafc",
+              background: c.bgSubtle,
               borderRadius: "20px",
               padding: "8px 12px",
               display: "flex",
               alignItems: "flex-end",
               gap: "8px",
-              border: "1px solid #f1f5f9",
+              border: `1px solid ${c.border}`,
             }}
           >
             <textarea
@@ -403,7 +386,7 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
                 outline: "none",
                 fontSize: "13px",
                 fontFamily: "Inter, sans-serif",
-                color: "#0F172A",
+                color: c.text,
                 minHeight: "18px",
                 maxHeight: "80px",
                 lineHeight: 1.5,
@@ -421,13 +404,13 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
               borderRadius: "50%",
               background: replyContent.trim()
                 ? "linear-gradient(135deg,#3B82F6,#2563eb)"
-                : "#e2e8f0",
+                : c.borderStrong,
               border: "none",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: replyContent.trim() ? "pointer" : "not-allowed",
-              color: replyContent.trim() ? "#ffffff" : "#94a3b8",
+              color: replyContent.trim() ? "#ffffff" : c.textMuted,
               flexShrink: 0,
               boxShadow: replyContent.trim()
                 ? "0 2px 8px rgba(59,130,246,0.3)"
@@ -439,14 +422,13 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
         </form>
       )}
 
-      {/* Replies thread */}
       {showReplies && (
         <div
           style={{
             marginLeft: "46px",
             marginTop: "8px",
             paddingLeft: "12px",
-            borderLeft: "2px solid #f1f5f9",
+            borderLeft: `2px solid ${c.border}`,
           }}
         >
           {loadingReplies && replies.length === 0 ? (
@@ -454,7 +436,7 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
               style={{
                 padding: "12px",
                 textAlign: "center",
-                color: "#94a3b8",
+                color: c.textMuted,
                 fontSize: "12px",
                 fontFamily: "Inter, sans-serif",
               }}
@@ -481,7 +463,7 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
                     padding: "8px",
                     background: "none",
                     border: "none",
-                    color: "#3B82F6",
+                    color: c.accent,
                     fontSize: "12px",
                     fontWeight: 600,
                     cursor: loadingReplies ? "wait" : "pointer",

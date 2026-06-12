@@ -10,7 +10,8 @@
     "seed": "node src/config/seed.js",
     "migrate:fresh": "node src/config/migrate.js && node src/config/seed.js",
     "db:reset": "node src/config/reset.js",
-    "seed:posts": "node src/config/seed-posts.js"
+    "seed:posts": "node src/config/seed-posts.js",
+    "seed:notices": "node src/config/seed-notices.js"
   },
   "engines": {
     "node": ">=18.0.0"
