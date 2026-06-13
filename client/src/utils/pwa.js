@@ -19,8 +19,6 @@ export const registerServiceWorker = async () => {
       scope: "/",
     });
 
-    console.log("[PWA] Service Worker registered:", registration.scope);
-
     // Auto-update check every hour
     setInterval(
       () => {
@@ -39,7 +37,6 @@ export const registerServiceWorker = async () => {
           newWorker.state === "installed" &&
           navigator.serviceWorker.controller
         ) {
-          console.log("[PWA] New version available — reload to update");
         }
       });
     });

@@ -6,20 +6,18 @@ const registerValidator = [
     .notEmpty()
     .withMessage("Full name is required")
     .isLength({ min: 2, max: 100 })
-    .withMessage("Full name must be between 2 and 100 characters")
+    .withMessage("Full name must be 2-100 characters")
     .matches(/^[a-zA-Z\s'-]+$/)
-    .withMessage(
-      "Full name can only contain letters, spaces, hyphens and apostrophes",
-    ),
+    .withMessage("Only letters, spaces, hyphens and apostrophes"),
 
   body("username")
     .trim()
     .notEmpty()
     .withMessage("Username is required")
     .isLength({ min: 3, max: 30 })
-    .withMessage("Username must be between 3 and 30 characters")
+    .withMessage("Username must be 3-30 characters")
     .matches(/^[a-zA-Z0-9_]+$/)
-    .withMessage("Username can only contain letters, numbers and underscores")
+    .withMessage("Only letters, numbers and underscores")
     .toLowerCase(),
 
   body("email")
@@ -27,7 +25,7 @@ const registerValidator = [
     .notEmpty()
     .withMessage("Email is required")
     .isEmail()
-    .withMessage("Please provide a valid email address")
+    .withMessage("Invalid email")
     .normalizeEmail()
     .toLowerCase(),
 
@@ -37,9 +35,7 @@ const registerValidator = [
     .isLength({ min: 8 })
     .withMessage("Password must be at least 8 characters")
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage(
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number",
-    ),
+    .withMessage("Must contain uppercase, lowercase and a number"),
 
   body("bio")
     .optional()
@@ -48,14 +44,23 @@ const registerValidator = [
     .withMessage("Bio cannot exceed 300 characters"),
 ];
 
-const loginValidator = [
-  body("email")
+const verifyRegistrationValidator = [
+  ...registerValidator,
+  body("otp")
     .trim()
     .notEmpty()
-    .withMessage("Email is required")
-    .isEmail()
-    .withMessage("Please provide a valid email address")
-    .normalizeEmail(),
+    .withMessage("OTP is required")
+    .isLength({ min: 6, max: 6 })
+    .withMessage("OTP must be 6 digits")
+    .matches(/^\d{6}$/)
+    .withMessage("OTP must be 6 digits"),
+];
+
+const loginValidator = [
+  body("identifier")
+    .trim()
+    .notEmpty()
+    .withMessage("Email or username is required"),
 
   body("password").notEmpty().withMessage("Password is required"),
 ];
@@ -68,19 +73,66 @@ const changePasswordValidator = [
   body("currentPassword")
     .notEmpty()
     .withMessage("Current password is required"),
+  body("newPassword")
+    .notEmpty()
+    .withMessage("New password is required")
+    .isLength({ min: 8 })
+    .withMessage("Must be at least 8 characters")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage("Must contain uppercase, lowercase and a number"),
+];
+
+const requestOTPValidator = [
+  body("email")
+    .trim()
+    .notEmpty()
+    .withMessage("Email is required")
+    .isEmail()
+    .withMessage("Invalid email")
+    .normalizeEmail(),
+];
+
+const resetPasswordValidator = [
+  body("email")
+    .trim()
+    .notEmpty()
+    .withMessage("Email is required")
+    .isEmail()
+    .withMessage("Invalid email")
+    .normalizeEmail(),
+
+  body("otp")
+    .trim()
+    .notEmpty()
+    .withMessage("OTP is required")
+    .matches(/^\d{6}$/)
+    .withMessage("OTP must be 6 digits"),
 
   body("newPassword")
     .notEmpty()
     .withMessage("New password is required")
     .isLength({ min: 8 })
-    .withMessage("New password must be at least 8 characters")
+    .withMessage("Must be at least 8 characters")
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage("New password must contain uppercase, lowercase and a number"),
+    .withMessage("Must contain uppercase, lowercase and a number"),
+];
+
+const confirmDeletionValidator = [
+  body("otp")
+    .trim()
+    .notEmpty()
+    .withMessage("OTP is required")
+    .matches(/^\d{6}$/)
+    .withMessage("OTP must be 6 digits"),
 ];
 
 module.exports = {
   registerValidator,
+  verifyRegistrationValidator,
   loginValidator,
   refreshTokenValidator,
   changePasswordValidator,
+  requestOTPValidator,
+  resetPasswordValidator,
+  confirmDeletionValidator,
 };

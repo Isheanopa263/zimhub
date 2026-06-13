@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileX, LogOut, Shield } from "lucide-react";
+import { ArrowLeft, FileX, Settings } from "lucide-react";
 
 import useAuthStore from "../store/authStore";
-import useAuth from "../hooks/useAuth";
 import useProfile from "../hooks/useProfile";
 import useTheme from "../hooks/useTheme";
 
@@ -16,7 +15,6 @@ const ProfilePage = () => {
   const { username: paramUsername } = useParams();
   const navigate = useNavigate();
   const { user: currentUser, setUser } = useAuthStore();
-  const { logout } = useAuth();
   const { c } = useTheme();
 
   const username = paramUsername || currentUser?.username;
@@ -54,12 +52,6 @@ const ProfilePage = () => {
     }
   };
 
-  const handleLogout = () => {
-    if (window.confirm("Are you sure you want to sign out?")) {
-      logout();
-    }
-  };
-
   if (loading) return <ProfileSkeleton />;
 
   if (error || !profile) {
@@ -88,13 +80,7 @@ const ProfilePage = () => {
             ? "User not found"
             : "Profile unavailable"}
         </h3>
-        <p
-          style={{
-            fontSize: "13px",
-            color: c.textMuted,
-            margin: "0 0 20px",
-          }}
-        >
+        <p style={{ fontSize: "13px", color: c.textMuted, margin: "0 0 20px" }}>
           {error || "This profile could not be loaded"}
         </p>
         <button
@@ -130,9 +116,76 @@ const ProfilePage = () => {
     >
       <ProfileHeader profile={profile} onEditClick={() => setEditOpen(true)} />
 
-      {/* Settings Section (own profile only) */}
+      {/* Settings button — only on own profile */}
       {profile.isOwnProfile && (
-        <SettingsSection user={currentUser} onLogout={handleLogout} c={c} />
+        <button
+          onClick={() => navigate("/settings")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            background: c.bgCard,
+            borderRadius: "16px",
+            border: `1px solid ${c.border}`,
+            padding: "14px 18px",
+            marginBottom: "16px",
+            boxShadow: c.shadowSm,
+            cursor: "pointer",
+            fontFamily: "Inter, sans-serif",
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = c.bgHover;
+            e.currentTarget.style.transform = "translateX(2px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = c.bgCard;
+            e.currentTarget.style.transform = "translateX(0)";
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                background: c.accentLight,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Settings size={18} color={c.accent} />
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <p
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  color: c.text,
+                  margin: 0,
+                }}
+              >
+                Account Settings
+              </p>
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: c.textTer,
+                  margin: "2px 0 0",
+                }}
+              >
+                Privacy, security, and account management
+              </p>
+            </div>
+          </div>
+          <ArrowLeft
+            size={16}
+            color={c.textMuted}
+            style={{ transform: "rotate(180deg)" }}
+          />
+        </button>
       )}
 
       {/* Posts heading */}
@@ -230,51 +283,5 @@ const ProfilePage = () => {
     </div>
   );
 };
-
-const SettingsSection = ({ user, onLogout, c }) => {
-  const navigate = useNavigate();
-  const isAdmin = user?.role === "admin";
-};
-
-const SettingsItem = ({
-  icon: Icon,
-  label,
-  color,
-  onClick,
-  isDanger = false,
-  c,
-}) => (
-  <button
-    onClick={onClick}
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: "12px",
-      width: "100%",
-      padding: "12px",
-      background: "transparent",
-      border: "none",
-      borderRadius: "10px",
-      cursor: "pointer",
-      fontSize: "14px",
-      fontWeight: 600,
-      color: color,
-      fontFamily: "Inter, sans-serif",
-      transition: "background 0.15s ease",
-      textAlign: "left",
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.background = isDanger
-        ? c.dangerLight
-        : c.accentLight;
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.background = "transparent";
-    }}
-  >
-    <Icon size={18} />
-    {label}
-  </button>
-);
 
 export default ProfilePage;

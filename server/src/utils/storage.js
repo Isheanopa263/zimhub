@@ -54,7 +54,6 @@ const deleteFile = (filenameOrPath, folder) => {
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
-      console.log(`🗑️  Deleted: ${filePath}`);
     }
   } catch (error) {
     console.error("Failed to delete file:", error.message);

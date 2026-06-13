@@ -1,20 +1,7 @@
 const ApiError = require("../utils/ApiError");
 
-/**
- * Global error handling middleware
- * Must be registered LAST in Express middleware chain
- */
 const errorHandler = (err, req, res, next) => {
-  // Log error for debugging
-  if (process.env.NODE_ENV === "development") {
-    console.error("🔥 Error:", {
-      name: err.name,
-      message: err.message,
-      stack: err.stack,
-    });
-  }
-
-  // Handle known ApiErrors
+  // Handle known ApiErrors silently (these are expected validation errors)
   if (err instanceof ApiError) {
     return res.status(err.statusCode).json({
       success: false,
@@ -23,7 +10,7 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Handle PostgreSQL unique violation
+  // PostgreSQL unique violation
   if (err.code === "23505") {
     return res.status(409).json({
       success: false,
@@ -31,7 +18,7 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Handle PostgreSQL foreign key violation
+  // PostgreSQL foreign key violation
   if (err.code === "23503") {
     return res.status(400).json({
       success: false,
@@ -39,22 +26,19 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Handle JWT errors
+  // JWT errors
   if (err.name === "JsonWebTokenError") {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid token",
-    });
+    return res.status(401).json({ success: false, message: "Invalid token" });
   }
-
   if (err.name === "TokenExpiredError") {
-    return res.status(401).json({
-      success: false,
-      message: "Token has expired",
-    });
+    return res
+      .status(401)
+      .json({ success: false, message: "Token has expired" });
   }
 
-  // Generic 500 error (don't leak details in production)
+  // Only log unexpected errors (real bugs)
+  console.error("🔥 Unexpected error:", err.message);
+
   return res.status(500).json({
     success: false,
     message:
@@ -64,9 +48,6 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-/**
- * Handle 404 - Route not found
- */
 const notFound = (req, res, next) => {
   next(ApiError.notFound(`Route ${req.originalUrl} not found`));
 };

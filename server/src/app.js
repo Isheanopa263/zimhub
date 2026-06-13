@@ -2,7 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 
@@ -24,15 +23,12 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-
-      // Allow any ngrok URL in development
       if (
         process.env.NODE_ENV === "development" &&
         (origin.includes("ngrok") || origin.includes("localhost"))
       ) {
         return callback(null, true);
       }
-
       if (allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error(`CORS blocked: ${origin}`));
     },
@@ -46,13 +42,13 @@ app.use(
   }),
 );
 
-// ─── Security (Helmet with CSP disabled for dev) ──────────────────────────────
+// ─── Security ──────────────────────────────────────────────────────────────────
 app.use(
   helmet({
-    crossOriginResourcePolicy: false, // ← CRITICAL: allow images cross-origin
-    crossOriginEmbedderPolicy: false, // ← allow embedding
-    crossOriginOpenerPolicy: false, // ← allow openers
-    contentSecurityPolicy: false, // ← disable CSP for dev
+    crossOriginResourcePolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    contentSecurityPolicy: false,
   }),
 );
 
@@ -61,16 +57,10 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-}
-
-// ─── Static file serving (uploads) ────────────────────────────────────────────
-// MUST come before rate limiters
+// ─── Static file serving ───────────────────────────────────────────────────────
 app.use(
   "/uploads",
   (req, res, next) => {
-    // Explicitly set headers that allow cross-origin image loading
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
@@ -80,7 +70,7 @@ app.use(
   express.static(path.join(__dirname, "../uploads")),
 );
 
-// ─── Rate limiting (after static files) ───────────────────────────────────────
+// ─── Rate limiting ─────────────────────────────────────────────────────────────
 app.use("/api/v1/auth", generalLimiter);
 
 // ─── Health check ──────────────────────────────────────────────────────────────
@@ -95,12 +85,13 @@ app.get("/health", (req, res) => {
 
 // ─── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api/v1/auth", require("./modules/auth/auth.routes"));
-app.use("/api/v1/users", require("./modules/users/users.routes")); // ← new
+app.use("/api/v1/users", require("./modules/users/users.routes"));
 app.use("/api/v1/posts", require("./modules/posts/posts.routes"));
 app.use("/api/v1/likes", require("./modules/likes/likes.routes"));
 app.use("/api/v1/comments", require("./modules/comments/comments.routes"));
 app.use("/api/v1/notices", require("./modules/notices/notices.routes"));
-app.use("/api/v1/search", require("./modules/search/search.routes")); // ← new
+app.use("/api/v1/search", require("./modules/search/search.routes"));
+app.use("/api/v1/admin", require("./modules/admin/admin.routes"));
 app.use(
   "/api/v1/announcements",
   require("./modules/announcements/announcements.routes"),
@@ -109,7 +100,6 @@ app.use(
   "/api/v1/notifications",
   require("./modules/notifications/notifications.routes"),
 );
-app.use("/api/v1/admin", require("./modules/admin/admin.routes"));
 
 // ─── Error handling ────────────────────────────────────────────────────────────
 app.use(notFound);
@@ -119,15 +109,9 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`
-  ╔═══════════════════════════════════════╗
-  ║          ZimHub API Server            ║
-  ╠═══════════════════════════════════════╣
-  ║  Status:  Running ✓                   ║
-  ║  Port:    ${PORT}                        ║
-  ║  Mode:    ${process.env.NODE_ENV || "development"}             ║
-  ╚═══════════════════════════════════════╝
-  `);
+  console.log(
+    `\n  🚀 ZimHub API running on port ${PORT} (${process.env.NODE_ENV || "development"})\n`,
+  );
 });
 
 module.exports = app;

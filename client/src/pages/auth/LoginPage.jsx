@@ -3,23 +3,24 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { AtSign, Lock, ArrowRight } from "lucide-react";
 
 import useAuth from "../../hooks/useAuth";
 import useAuthStore from "../../store/authStore";
 import useTheme from "../../hooks/useTheme";
+
 import Logo from "../../components/ui/Logo";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import ThemeToggleButton from "../../components/ui/ThemeToggleButton";
 
+/* ─── Validation Schema ─────────────────────────────────────────────────────── */
 const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email"),
+  identifier: z.string().min(1, "Email or username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
+/* ─── Component ─────────────────────────────────────────────────────────────── */
 const LoginPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
@@ -32,9 +33,10 @@ const LoginPage = () => {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { identifier: "", password: "" },
   });
 
+  /* Redirect if already logged in */
   useEffect(() => {
     if (isAuthenticated) navigate("/feed", { replace: true });
   }, [isAuthenticated, navigate]);
@@ -59,7 +61,10 @@ const LoginPage = () => {
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
-      {/* Background blobs */}
+      {/* ── Theme Toggle ── */}
+      <ThemeToggleButton position="top-right" />
+
+      {/* ── Background blobs ── */}
       <div
         style={{
           position: "absolute",
@@ -87,7 +92,7 @@ const LoginPage = () => {
         }}
       />
 
-      {/* Login Card */}
+      {/* ── Card ── */}
       <div
         style={{
           width: "100%",
@@ -156,15 +161,15 @@ const LoginPage = () => {
               style={{ display: "flex", flexDirection: "column", gap: "18px" }}
             >
               <Input
-                label="Email Address"
-                name="email"
-                type="email"
-                placeholder="you@university.ac.zw"
-                icon={Mail}
-                error={errors.email?.message}
+                label="Email or Username"
+                name="identifier"
+                type="text"
+                placeholder="you@uni.ac.zw or username"
+                icon={AtSign}
+                error={errors.identifier?.message}
                 required
-                autoComplete="email"
-                {...register("email")}
+                autoComplete="username"
+                {...register("identifier")}
               />
 
               <Input
@@ -188,20 +193,18 @@ const LoginPage = () => {
                 marginTop: "10px",
               }}
             >
-              <button
-                type="button"
+              <Link
+                to="/forgot-password"
                 style={{
-                  background: "none",
-                  border: "none",
                   color: c.accent,
                   fontSize: "13px",
                   fontWeight: 600,
-                  cursor: "pointer",
+                  textDecoration: "none",
                   fontFamily: "Inter, system-ui, sans-serif",
                 }}
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             {/* Submit button */}

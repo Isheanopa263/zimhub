@@ -6,11 +6,13 @@ import { ProtectedRoute, PublicRoute } from "./components/auth/ProtectedRoute";
 
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import FeedPage from "./pages/FeedPage";
 import SearchPage from "./pages/SearchPage";
 import NoticePage from "./pages/NoticePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import ProfilePage from "./pages/ProfilePage";
+import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/admin/AdminPage";
 
 import useAuthStore from "./store/authStore";
@@ -22,12 +24,9 @@ const App = () => {
   const { isAuthenticated, setUser, logout } = useAuthStore();
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
 
-  /* Verify token + load initial unread count on app start */
   useEffect(() => {
     const initialize = async () => {
       if (!isAuthenticated) return;
-
-      // Verify auth
       try {
         const userResp = await authApi.getMe();
         setUser(userResp.data);
@@ -35,21 +34,17 @@ const App = () => {
         logout();
         return;
       }
-
-      // Load initial unread count
       try {
         const countResp = await notificationsApi.getUnreadCount();
         setUnreadCount(countResp.data?.count || 0);
-      } catch {
-        // silent
-      }
+      } catch {}
     };
-
     initialize();
   }, []);
 
   return (
     <Routes>
+      {/* ─── Public Auth Routes ──────────────────────── */}
       <Route
         path="/login"
         element={
@@ -66,7 +61,16 @@ const App = () => {
           </PublicRoute>
         }
       />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPasswordPage />
+          </PublicRoute>
+        }
+      />
 
+      {/* ─── Protected Routes (inside AppLayout) ─────── */}
       <Route
         element={
           <ProtectedRoute>
@@ -78,6 +82,7 @@ const App = () => {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/notices" element={<NoticePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
         <Route
@@ -90,10 +95,13 @@ const App = () => {
         />
       </Route>
 
+      {/* ─── Root Redirect ──────────────────────────── */}
       <Route
         path="/"
         element={<Navigate to={isAuthenticated ? "/feed" : "/login"} replace />}
       />
+
+      {/* ─── Catch-All 404 (MUST be LAST!) ──────────── */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

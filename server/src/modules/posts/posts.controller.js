@@ -62,21 +62,13 @@ const getFeed = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 10;
     const type = req.query.type || "all";
 
-    console.log(
-      `📰 Feed request — user: ${req.user.id}, page: ${page}, type: ${type}`,
-    );
-
     const result = await postsService.getFeedPosts(req.user.id, {
       page,
       limit,
       type,
     });
-
-    console.log(`✅ Feed loaded — ${result.posts.length} posts`);
-
     return ApiResponse.success(res, "Feed loaded", result.posts, result.meta);
   } catch (error) {
-    console.error("❌ Feed error:", error.message, error.stack);
     next(error);
   }
 };

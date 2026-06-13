@@ -153,6 +153,24 @@ CREATE TABLE IF NOT EXISTS announcements (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- OTP table for email verification & password reset
+CREATE TABLE IF NOT EXISTS otp_codes (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email       VARCHAR(255) NOT NULL,
+  code        VARCHAR(6)   NOT NULL,
+  purpose     VARCHAR(30)  NOT NULL CHECK (purpose IN (
+    'register', 'password_reset', 'account_deletion'
+  )),
+  attempts    INTEGER      NOT NULL DEFAULT 0,
+  is_used     BOOLEAN      NOT NULL DEFAULT false,
+  expires_at  TIMESTAMPTZ  NOT NULL,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_otp_email_purpose ON otp_codes(email, purpose);
+CREATE INDEX IF NOT EXISTS idx_otp_expires       ON otp_codes(expires_at);
+
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- INDEXES
 -- ─────────────────────────────────────────────────────────────────────────────

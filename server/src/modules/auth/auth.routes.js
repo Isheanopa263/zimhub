@@ -8,23 +8,36 @@ const validate = require("../../middleware/validate");
 
 const {
   registerValidator,
+  verifyRegistrationValidator,
   loginValidator,
   refreshTokenValidator,
   changePasswordValidator,
+  requestOTPValidator,
+  resetPasswordValidator,
+  confirmDeletionValidator,
 } = require("./auth.validators");
 
-// ─── Public Routes ─────────────────────────────────────────────────────────────
+// ─── Public ──────────────────────────────────────────────────────
 
-// POST /api/v1/auth/register
+// POST /auth/register/request — STEP 1: Send OTP
 router.post(
-  "/register",
+  "/register/request",
   authLimiter,
   registerValidator,
   validate,
-  authController.register,
+  authController.requestRegistrationOTP,
 );
 
-// POST /api/v1/auth/login
+// POST /auth/register/verify — STEP 2: Verify OTP + create
+router.post(
+  "/register/verify",
+  authLimiter,
+  verifyRegistrationValidator,
+  validate,
+  authController.verifyAndCreateAccount,
+);
+
+// POST /auth/login (email or username)
 router.post(
   "/login",
   authLimiter,
@@ -33,7 +46,7 @@ router.post(
   authController.login,
 );
 
-// POST /api/v1/auth/refresh
+// POST /auth/refresh
 router.post(
   "/refresh",
   refreshTokenValidator,
@@ -41,18 +54,32 @@ router.post(
   authController.refresh,
 );
 
-// POST /api/v1/auth/logout
+// POST /auth/logout
 router.post("/logout", authController.logout);
 
-// ─── Protected Routes ──────────────────────────────────────────────────────────
+// Password reset (2-step OTP)
+router.post(
+  "/password-reset/request",
+  authLimiter,
+  requestOTPValidator,
+  validate,
+  authController.requestPasswordReset,
+);
 
-// GET /api/v1/auth/me
+router.post(
+  "/password-reset/confirm",
+  authLimiter,
+  resetPasswordValidator,
+  validate,
+  authController.resetPassword,
+);
+
+// ─── Protected ────────────────────────────────────────────────────
+
 router.get("/me", authenticate, authController.getMe);
 
-// POST /api/v1/auth/logout-all
 router.post("/logout-all", authenticate, authController.logoutAll);
 
-// PATCH /api/v1/auth/change-password
 router.patch(
   "/change-password",
   authenticate,
@@ -60,5 +87,35 @@ router.patch(
   validate,
   authController.changePassword,
 );
+
+// Account deletion (2-step OTP)
+router.post(
+  "/delete-account/request",
+  authenticate,
+  authController.requestAccountDeletion,
+);
+
+router.delete(
+  "/delete-account/confirm",
+  authenticate,
+  confirmDeletionValidator,
+  validate,
+  authController.confirmAccountDeletion,
+);
+
+// ─── DEV ONLY: Test email config ──────────────────────────────────
+if (process.env.NODE_ENV === "development") {
+  router.post("/test-email", async (req, res) => {
+    const { testEmailConfig } = require("../../utils/email");
+    const { email } = req.body;
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email required" });
+    }
+    const result = await testEmailConfig(email);
+    res.json(result);
+  });
+}
 
 module.exports = router;
