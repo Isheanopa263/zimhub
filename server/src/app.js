@@ -2,13 +2,21 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const compression = require("compression");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 
 const { generalLimiter } = require("./middleware/rateLimiter");
 const { errorHandler, notFound } = require("./middleware/errorHandler");
+const { initCleanupJobs } = require("./utils/cleanup");
 
 const app = express();
+
+// Trust proxy (needed when behind nginx/load balancer)
+app.set("trust proxy", 1);
+
+// Disable x-powered-by header (security + perf)
+app.disable("x-powered-by");
 
 // ─── CORS ──────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
@@ -39,6 +47,19 @@ app.use(
       "Authorization",
       "ngrok-skip-browser-warning",
     ],
+    maxAge: 86400, // Cache preflight for 24h
+  }),
+);
+
+// ─── Compression — huge performance win ────────────────────────────────────────
+app.use(
+  compression({
+    level: 6, // Compression level (1-9, 6 is good balance)
+    threshold: 1024, // Only compress responses > 1KB
+    filter: (req, res) => {
+      if (req.headers["x-no-compression"]) return false;
+      return compression.filter(req, res);
+    },
   }),
 );
 
@@ -57,17 +78,21 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// ─── Static file serving ───────────────────────────────────────────────────────
+// ─── Static file serving with strong caching ───────────────────────────────────
 app.use(
   "/uploads",
   (req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    res.setHeader("Cache-Control", "public, max-age=3600");
+    // Cache uploads for 30 days (they're immutable)
+    res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
     next();
   },
-  express.static(path.join(__dirname, "../uploads")),
+  express.static(path.join(__dirname, "../uploads"), {
+    maxAge: "30d",
+    etag: true,
+  }),
 );
 
 // ─── Rate limiting ─────────────────────────────────────────────────────────────
@@ -105,13 +130,43 @@ app.use(
 app.use(notFound);
 app.use(errorHandler);
 
-// ─── Start ─────────────────────────────────────────────────────────────────────
+// ─── Server with keep-alive optimization ──────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, "0.0.0.0", () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(
     `\n  🚀 ZimHub API running on port ${PORT} (${process.env.NODE_ENV || "development"})\n`,
   );
+
+  if (process.env.NODE_ENV !== "test") {
+    initCleanupJobs();
+  }
 });
+
+// Tune server for high concurrency
+server.keepAliveTimeout = 65000; // Slightly higher than load balancer timeout
+server.headersTimeout = 66000;
+server.requestTimeout = 60000;
+
+// Graceful shutdown
+const gracefulShutdown = (signal) => {
+  console.log(`\n📦 ${signal} received — shutting down gracefully...`);
+  server.close(() => {
+    console.log("  ✅ HTTP server closed");
+    require("./config/database").pool.end(() => {
+      console.log("  ✅ Database pool closed");
+      process.exit(0);
+    });
+  });
+
+  // Force shutdown after 30s
+  setTimeout(() => {
+    console.error("  ⚠️  Forced shutdown");
+    process.exit(1);
+  }, 30000);
+};
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 module.exports = app;

@@ -169,6 +169,29 @@ const CommentInput = ({ onSubmit, submitting, autoFocus = false }) => {
       >
         <Send size={15} style={{ marginLeft: "2px" }} />
       </button>
+
+      {/* Markdown hint */}
+      {content.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "flex-end",
+            paddingRight: "50px",
+            marginTop: "4px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "10px",
+              color: c.textMuted,
+              fontFamily: "Inter, sans-serif",
+            }}
+          >
+            **bold** *italic* @mention #tag
+          </span>
+        </div>
+      )}
     </form>
   );
 };

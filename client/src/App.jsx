@@ -27,6 +27,7 @@ const App = () => {
   useEffect(() => {
     const initialize = async () => {
       if (!isAuthenticated) return;
+
       try {
         const userResp = await authApi.getMe();
         setUser(userResp.data);
@@ -34,17 +35,20 @@ const App = () => {
         logout();
         return;
       }
+
       try {
         const countResp = await notificationsApi.getUnreadCount();
         setUnreadCount(countResp.data?.count || 0);
-      } catch {}
+      } catch {
+        // silent
+      }
     };
+
     initialize();
   }, []);
 
   return (
     <Routes>
-      {/* ─── Public Auth Routes ──────────────────────── */}
       <Route
         path="/login"
         element={
@@ -70,7 +74,6 @@ const App = () => {
         }
       />
 
-      {/* ─── Protected Routes (inside AppLayout) ─────── */}
       <Route
         element={
           <ProtectedRoute>
@@ -95,13 +98,11 @@ const App = () => {
         />
       </Route>
 
-      {/* ─── Root Redirect ──────────────────────────── */}
       <Route
         path="/"
         element={<Navigate to={isAuthenticated ? "/feed" : "/login"} replace />}
       />
 
-      {/* ─── Catch-All 404 (MUST be LAST!) ──────────── */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

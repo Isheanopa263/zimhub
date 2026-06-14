@@ -12,6 +12,7 @@ import {
 import useAuthStore from "../../store/authStore";
 import useTheme from "../../hooks/useTheme";
 import { getAvatarUrl, getNoticeUrl } from "../../utils/media";
+import MarkdownText from "../ui/MarkdownText";
 
 import NoticeContactButtons from "./NoticeContactButtons";
 
@@ -272,18 +273,8 @@ const NoticeCard = ({ notice, onEdit, onDelete, onToggleStatus }) => {
         </h3>
 
         {/* Description */}
-        <p
-          style={{
-            fontSize: "14px",
-            color: c.textSec,
-            margin: "0 0 12px",
-            lineHeight: 1.55,
-            fontFamily: "Inter, sans-serif",
-            wordBreak: "break-word",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {displayDescription}
+        <div style={{ marginBottom: "12px" }}>
+          <MarkdownText variant="default">{displayDescription}</MarkdownText>
           {isLongDescription && (
             <button
               onClick={() => setExpanded(!expanded)}
@@ -294,14 +285,14 @@ const NoticeCard = ({ notice, onEdit, onDelete, onToggleStatus }) => {
                 cursor: "pointer",
                 fontWeight: 700,
                 fontSize: "13px",
-                padding: "0 0 0 4px",
+                padding: "4px 0 0",
                 fontFamily: "Inter, sans-serif",
               }}
             >
-              {expanded ? " Show less" : " Read more"}
+              {expanded ? "Show less" : "Read more"}
             </button>
           )}
-        </p>
+        </div>
 
         {/* Poster image */}
         {posterSrc && !posterError && (

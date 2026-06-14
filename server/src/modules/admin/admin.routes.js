@@ -5,6 +5,7 @@ const { param, body } = require("express-validator");
 const controller = require("./admin.controller");
 const { authenticate, requireAdmin } = require("../../middleware/auth");
 const validate = require("../../middleware/validate");
+const { stats: cacheStats, flush: cacheFlush } = require("../../utils/cache");
 
 // ALL routes require admin
 router.use(authenticate);
@@ -70,5 +71,20 @@ router.post(
   validate,
   controller.broadcastAnnouncement,
 );
+
+// Manual cleanup trigger
+router.post("/cleanup/posts", controller.triggerCleanup);
+
+// GET cache stats
+router.get("/cache/stats", async (req, res) => {
+  const stats = await cacheStats();
+  res.json({ success: true, data: stats });
+});
+
+// DELETE flush cache
+router.delete("/cache", async (req, res) => {
+  const count = await cacheFlush();
+  res.json({ success: true, message: `${count} cache keys cleared` });
+});
 
 module.exports = router;

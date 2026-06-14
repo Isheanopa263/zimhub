@@ -7,8 +7,8 @@ const registerValidator = [
     .withMessage("Full name is required")
     .isLength({ min: 2, max: 100 })
     .withMessage("Full name must be 2-100 characters")
-    .matches(/^[a-zA-Z\s'-]+$/)
-    .withMessage("Only letters, spaces, hyphens and apostrophes"),
+    .matches(/^[a-zA-Z\s'\-.]+$/)
+    .withMessage("Only letters, spaces, hyphens, apostrophes and periods"),
 
   body("username")
     .trim()

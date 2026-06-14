@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { noticesApi } from "../../api/endpoints/notices.api";
 import { getNoticeUrl } from "../../utils/media";
 import useTheme from "../../hooks/useTheme";
+import MarkdownEditor from "../ui/MarkdownEditor";
 
 const NoticeFormModal = ({
   isOpen,
@@ -245,27 +246,14 @@ const NoticeFormModal = ({
 
           {/* Description */}
           <FormField label="Description" icon={FileText} required c={c}>
-            <textarea
+            <MarkdownEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Provide details about your notice..."
+              onChange={setDescription}
+              placeholder="Provide details... **bold** *italic* @mentions"
               maxLength={2000}
               rows={5}
-              required
-              style={{ ...inputStyle, resize: "vertical", minHeight: "100px" }}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
+              showPreviewToggle
             />
-            <div
-              style={{
-                textAlign: "right",
-                fontSize: "11px",
-                color: description.length > 1800 ? c.danger : c.textMuted,
-                marginTop: "4px",
-              }}
-            >
-              {description.length}/2000
-            </div>
           </FormField>
 
           {/* Poster image */}

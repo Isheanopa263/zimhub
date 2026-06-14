@@ -2,6 +2,7 @@ const { query, getClient } = require("../../config/database");
 const ApiError = require("../../utils/ApiError");
 const { getFileUrl, deleteFile } = require("../../utils/storage");
 const { getPaginationMeta } = require("../../utils/helpers");
+const { remember, invalidate } = require("../../utils/cache");
 
 /* ─── DASHBOARD STATISTICS ───────────────────────────────────────────────── */
 
@@ -10,19 +11,20 @@ const { getPaginationMeta } = require("../../utils/helpers");
  */
 const getDashboardStats = async () => {
   // Run all counts in parallel
-  const [
-    usersResult,
-    postsResult,
-    noticesResult,
-    commentsResult,
-    likesResult,
-    recentUsersResult,
-    recentActivityResult,
-    postsByTypeResult,
-    growthResult,
-  ] = await Promise.all([
-    // Total users + breakdown
-    query(`
+  return remember("admin:dashboard", 30, async () => {
+    const [
+      usersResult,
+      postsResult,
+      noticesResult,
+      commentsResult,
+      likesResult,
+      recentUsersResult,
+      recentActivityResult,
+      postsByTypeResult,
+      growthResult,
+    ] = await Promise.all([
+      // Total users + breakdown
+      query(`
       SELECT 
         COUNT(*)::int AS total,
         COUNT(*) FILTER (WHERE role = 'admin')::int AS admins,
@@ -33,8 +35,8 @@ const getDashboardStats = async () => {
       FROM users
     `),
 
-    // Total posts
-    query(`
+      // Total posts
+      query(`
       SELECT
         COUNT(*)::int AS total,
         COUNT(*) FILTER (WHERE is_deleted = false)::int AS active,
@@ -43,8 +45,8 @@ const getDashboardStats = async () => {
       FROM posts
     `),
 
-    // Total notices
-    query(`
+      // Total notices
+      query(`
       SELECT
         COUNT(*)::int AS total,
         COUNT(*) FILTER (WHERE status = 'active')::int AS active,
@@ -53,19 +55,19 @@ const getDashboardStats = async () => {
       FROM notices
     `),
 
-    // Comments
-    query(`
+      // Comments
+      query(`
       SELECT
         COUNT(*) FILTER (WHERE is_deleted = false)::int AS active,
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours' AND is_deleted = false)::int AS today
       FROM comments
     `),
 
-    // Likes
-    query(`SELECT COUNT(*)::int AS total FROM likes`),
+      // Likes
+      query(`SELECT COUNT(*)::int AS total FROM likes`),
 
-    // Recent users (last 5)
-    query(`
+      // Recent users (last 5)
+      query(`
       SELECT 
         u.id, u.username, u.role, u.created_at, u.is_suspended,
         p.full_name, p.avatar_url
@@ -75,8 +77,8 @@ const getDashboardStats = async () => {
       LIMIT 5
     `),
 
-    // Recent activity feed (last 10 events)
-    query(`
+      // Recent activity feed (last 10 events)
+      query(`
       (
         SELECT 'post' AS type, p.id, p.created_at,
                u.username, pr.full_name,
@@ -113,16 +115,16 @@ const getDashboardStats = async () => {
       LIMIT 10
     `),
 
-    // Posts by type breakdown
-    query(`
+      // Posts by type breakdown
+      query(`
       SELECT post_type, COUNT(*)::int AS count
       FROM posts
       WHERE is_deleted = false
       GROUP BY post_type
     `),
 
-    // Daily growth — last 7 days
-    query(`
+      // Daily growth — last 7 days
+      query(`
       WITH days AS (
         SELECT generate_series(
           NOW() - INTERVAL '6 days',
@@ -137,58 +139,69 @@ const getDashboardStats = async () => {
       FROM days
       ORDER BY days.day ASC
     `),
-  ]);
+    ]);
 
-  // Format posts by type into object
-  const postTypes = postsByTypeResult.rows.reduce(
-    (acc, row) => {
-      acc[row.post_type] = row.count;
-      return acc;
-    },
-    { video: 0, image: 0, text: 0, link: 0 },
-  );
+    // Format posts by type into object
+    const postTypes = postsByTypeResult.rows.reduce(
+      (acc, row) => {
+        acc[row.post_type] = row.count;
+        return acc;
+      },
+      { video: 0, image: 0, text: 0, link: 0 },
+    );
 
-  // Format recent users
-  const recentUsers = recentUsersResult.rows.map((u) => ({
-    id: u.id,
-    username: u.username,
-    fullName: u.full_name,
-    role: u.role,
-    isSuspended: u.is_suspended,
-    avatarUrl: u.avatar_url ? getFileUrl(u.avatar_url, "avatars") : null,
-    joinedAt: u.created_at,
-  }));
+    // Format recent users
+    const recentUsers = recentUsersResult.rows.map((u) => ({
+      id: u.id,
+      username: u.username,
+      fullName: u.full_name,
+      role: u.role,
+      isSuspended: u.is_suspended,
+      avatarUrl: u.avatar_url ? getFileUrl(u.avatar_url, "avatars") : null,
+      joinedAt: u.created_at,
+    }));
 
-  // Format activity
-  const activity = recentActivityResult.rows.map((a) => ({
-    type: a.type,
-    id: a.id,
-    username: a.username,
-    fullName: a.full_name,
-    detail: a.detail,
-    timestamp: a.created_at,
-  }));
+    // Format activity
+    const activity = recentActivityResult.rows.map((a) => ({
+      type: a.type,
+      id: a.id,
+      username: a.username,
+      fullName: a.full_name,
+      detail: a.detail,
+      timestamp: a.created_at,
+    }));
 
-  // Format growth chart data
-  const growth = growthResult.rows.map((row) => ({
-    date: row.day,
-    users: row.users || 0,
-    posts: row.posts || 0,
-  }));
+    // Format growth chart data
+    const growth = growthResult.rows.map((row) => ({
+      date: row.day,
+      users: row.users || 0,
+      posts: row.posts || 0,
+    }));
 
-  return {
-    users: usersResult.rows[0],
-    posts: {
-      ...postsResult.rows[0],
-      byType: postTypes,
-    },
-    notices: noticesResult.rows[0],
-    comments: commentsResult.rows[0],
-    likes: likesResult.rows[0],
-    recentUsers,
-    recentActivity: activity,
-    growth,
-  };
+    return {
+      users: usersResult.rows[0],
+      posts: {
+        ...postsResult.rows[0],
+        byType: postTypes,
+      },
+      notices: noticesResult.rows[0],
+      comments: commentsResult.rows[0],
+      likes: likesResult.rows[0],
+      recentUsers,
+      recentActivity: activity,
+      growth,
+    };
+    return {
+      users,
+      posts,
+      notices,
+      comments,
+      likes,
+      recentUsers,
+      recentActivity,
+      growth,
+    };
+  });
 };
 
 /* ─── USER MANAGEMENT ─────────────────────────────────────────────────────── */

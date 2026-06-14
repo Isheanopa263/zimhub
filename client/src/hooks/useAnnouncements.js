@@ -1,31 +1,17 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../api/axios";
 
-/**
- * Fetch active announcements for display
- */
 const useAnnouncements = (limit = 5) => {
-  const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useQuery({
+    queryKey: ["announcements", limit],
+    queryFn: async () => {
+      const response = await api.get("/announcements", { params: { limit } });
+      return response.data?.data || [];
+    },
+    staleTime: 1000 * 60 * 5, // Announcements are fresh for 5 minutes
+  });
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const response = await api.get("/announcements", {
-          params: { limit },
-        });
-        setAnnouncements(response.data?.data || []);
-      } catch {
-        setAnnouncements([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, [limit]);
-
-  return { announcements, loading };
+  return { announcements: data || [], loading: isLoading };
 };
 
 export default useAnnouncements;

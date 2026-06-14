@@ -6,19 +6,24 @@ const pool = new Pool({
     process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: false }
       : false,
-  max: 20,
+
+  // Tuned for 500+ concurrent users
+  max: 50, // Max connections (was 20)
+  min: 5, // Keep min connections warm
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 5000, // Increased from 2s
+
+  // Statement timeout — kill slow queries
+  statement_timeout: 30000, // 30 seconds
+
+  // Application name for monitoring
+  application_name: "zimhub-api",
 });
 
 pool.on("error", (err) => {
   console.error("❌ Database error:", err.message);
-  process.exit(-1);
 });
 
-/**
- * Execute a query
- */
 const query = async (text, params) => {
   try {
     return await pool.query(text, params);

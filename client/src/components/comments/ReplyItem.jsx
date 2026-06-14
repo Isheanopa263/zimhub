@@ -4,6 +4,7 @@ import { Trash2, MoreHorizontal } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 import useTheme from "../../hooks/useTheme";
 import { getAvatarUrl } from "../../utils/media";
+import MarkdownText from "../ui/MarkdownText";
 
 const timeAgo = (dateString) => {
   if (!dateString) return "";
@@ -182,18 +183,7 @@ const ReplyItem = ({ reply, onDelete }) => {
             )}
           </div>
 
-          <p
-            style={{
-              fontSize: "13px",
-              color: c.text,
-              margin: 0,
-              lineHeight: 1.45,
-              fontFamily: "Inter, sans-serif",
-              wordBreak: "break-word",
-            }}
-          >
-            {reply.content}
-          </p>
+          <MarkdownText variant="compact">{reply.content}</MarkdownText>
         </div>
 
         <div

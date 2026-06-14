@@ -1,91 +1,86 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useCallback } from "react";
 import { usersApi } from "../api/endpoints/users.api";
 import { postsApi } from "../api/endpoints/posts.api";
 
-/**
- * Load profile + user posts
- */
 const useProfile = (username) => {
-  const [profile, setProfile] = useState(null);
+  const queryClient = useQueryClient();
+
+  // Cache profile data
+  const {
+    data: profile,
+    isLoading: loading,
+    error,
+    refetch: refetchProfile,
+  } = useQuery({
+    queryKey: ["profile", username],
+    queryFn: async () => {
+      const response = await usersApi.getProfile(username);
+      return response.data;
+    },
+    enabled: !!username,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+
+  // Posts state (manual for pagination)
   const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingPosts, setLoadingPosts] = useState(false);
-  const [error, setError] = useState(null);
   const [postsMeta, setPostsMeta] = useState(null);
+  const [loadingPosts, setLoadingPosts] = useState(false);
   const [hasMorePosts, setHasMorePosts] = useState(true);
 
-  /* Load profile + first page of posts */
-  const loadProfile = useCallback(async () => {
-    if (!username) return;
+  // Load posts when profile is ready
+  useEffect(() => {
+    if (!profile?.id) return;
 
-    setLoading(true);
-    setError(null);
+    setLoadingPosts(true);
+    postsApi
+      .getUserPosts(profile.id, { page: 1, limit: 10 })
+      .then((res) => {
+        setPosts(res.data || []);
+        setPostsMeta(res.meta);
+        setHasMorePosts(res.meta?.hasNextPage || false);
+      })
+      .finally(() => setLoadingPosts(false));
+  }, [profile?.id]);
 
-    try {
-      const profileRes = await usersApi.getProfile(username);
-      setProfile(profileRes.data);
-
-      // Load user's posts
-      const postsRes = await postsApi.getUserPosts(profileRes.data.id, {
-        page: 1,
-        limit: 10,
-      });
-
-      setPosts(postsRes.data || []);
-      setPostsMeta(postsRes.meta);
-      setHasMorePosts(postsRes.meta?.hasNextPage || false);
-    } catch (err) {
-      const msg = err?.response?.data?.message || "Failed to load profile";
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [username]);
-
-  /* Load more posts */
   const loadMorePosts = async () => {
     if (loadingPosts || !hasMorePosts || !postsMeta || !profile) return;
-
     setLoadingPosts(true);
     try {
       const response = await postsApi.getUserPosts(profile.id, {
         page: postsMeta.page + 1,
         limit: 10,
       });
-
       setPosts((prev) => [...prev, ...(response.data || [])]);
       setPostsMeta(response.meta);
       setHasMorePosts(response.meta?.hasNextPage || false);
-    } catch {
-      // silent
     } finally {
       setLoadingPosts(false);
     }
   };
 
-  /* Update profile data in state (after edit) */
-  const updateProfileInState = useCallback((updates) => {
-    setProfile((prev) => (prev ? { ...prev, ...updates } : prev));
-  }, []);
+  const updateProfileInState = useCallback(
+    (updates) => {
+      queryClient.setQueryData(["profile", username], (old) =>
+        old ? { ...old, ...updates } : old,
+      );
+    },
+    [queryClient, username],
+  );
 
-  /* Remove a post from the list */
   const removePost = useCallback((postId) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   }, []);
-
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
 
   return {
     profile,
     posts,
     loading,
     loadingPosts,
-    error,
+    error: error?.response?.data?.message || error?.message,
     hasMorePosts,
     loadMorePosts,
-    refreshProfile: loadProfile,
+    refreshProfile: refetchProfile,
     updateProfileInState,
     removePost,
   };

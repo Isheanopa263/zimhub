@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { ImagePlus, X } from "lucide-react";
 import Button from "../ui/Button";
 import useTheme from "../../hooks/useTheme";
+import MarkdownEditor from "../ui/MarkdownEditor";
 
 const CreateImageForm = ({ onSubmit, loading }) => {
   const [caption, setCaption] = useState("");
@@ -117,27 +118,13 @@ const CreateImageForm = ({ onSubmit, loading }) => {
         </div>
       )}
 
-      <textarea
+      <MarkdownEditor
         value={caption}
-        onChange={(e) => setCaption(e.target.value)}
+        onChange={setCaption}
         placeholder="Add a caption (optional)"
         maxLength={500}
-        rows={2}
-        style={{
-          width: "100%",
-          padding: "12px",
-          borderRadius: "12px",
-          border: `2px solid ${c.borderStrong}`,
-          background: c.bgInput,
-          color: c.text,
-          resize: "none",
-          fontSize: "14px",
-          fontFamily: "Inter, sans-serif",
-          outline: "none",
-          marginBottom: "14px",
-        }}
-        onFocus={(e) => (e.target.style.borderColor = c.accent)}
-        onBlur={(e) => (e.target.style.borderColor = c.borderStrong)}
+        rows={3}
+        showPreviewToggle={true}
       />
 
       <Button

@@ -46,24 +46,25 @@ const requestRegistrationOTP = async ({
   const normalizedEmail = email.toLowerCase().trim();
   const normalizedUsername = username.toLowerCase().trim();
 
-  // Check email availability
-  const emailCheck = await query("SELECT id FROM users WHERE email = $1", [
-    normalizedEmail,
-  ]);
+  // Check email availability (case-insensitive)
+  const emailCheck = await query(
+    "SELECT id FROM users WHERE LOWER(email) = LOWER($1)",
+    [normalizedEmail],
+  );
   if (emailCheck.rows.length > 0) {
     throw ApiError.conflict("An account with this email already exists");
   }
 
-  // Check username availability
+  // Check username availability (case-insensitive)
   const usernameCheck = await query(
-    "SELECT id FROM users WHERE username = $1",
+    "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
     [normalizedUsername],
   );
   if (usernameCheck.rows.length > 0) {
     throw ApiError.conflict("This username is already taken");
   }
 
-  // Send OTP — pass first name for personalization
+  // Send OTP
   const firstName = fullName?.trim().split(" ")[0] || "there";
   await otpService.createAndSendOTP(normalizedEmail, "register", firstName);
 

@@ -185,7 +185,23 @@ const broadcastAnnouncement = async (req, res, next) => {
   }
 };
 
+const { runAllCleanup, cleanupOldPosts } = require("../../utils/cleanup");
+
+const triggerCleanup = async (req, res, next) => {
+  try {
+    const result = await cleanupOldPosts();
+    return ApiResponse.success(
+      res,
+      `Cleanup complete: ${result.postsDeleted} posts, ${result.filesDeleted} files removed`,
+      result,
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  triggerCleanup,
   getDashboard,
   getUsers,
   toggleSuspension,

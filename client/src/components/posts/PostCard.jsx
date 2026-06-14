@@ -8,6 +8,7 @@ import LinkPost from "./LinkPost";
 import CommentsDrawer from "../comments/CommentsDrawer";
 import useLike from "../../hooks/useLike";
 import useTheme from "../../hooks/useTheme";
+import MarkdownText from "../ui/MarkdownText";
 
 const PostCard = ({ post, onDelete }) => {
   const { c } = useTheme();
@@ -104,20 +105,10 @@ const PostCard = ({ post, onDelete }) => {
   );
 };
 
-const Caption = ({ text, c }) => (
-  <p
-    style={{
-      fontSize: "15px",
-      color: c.text,
-      marginTop: 0,
-      marginBottom: "10px",
-      lineHeight: 1.55,
-      fontFamily: "Inter, sans-serif",
-      wordBreak: "break-word",
-    }}
-  >
-    {text}
-  </p>
+const Caption = ({ text }) => (
+  <div style={{ marginBottom: "10px" }}>
+    <MarkdownText variant="default">{text}</MarkdownText>
+  </div>
 );
 
 export default PostCard;

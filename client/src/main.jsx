@@ -12,13 +12,18 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 1000 * 60 * 5,
+      staleTime: 1000 * 60 * 2,
+      gcTime: 1000 * 60 * 10,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      retry: 0,
     },
   },
 });
 
-/* Apply theme BEFORE React renders to avoid flash of light theme */
+/* Apply theme before render to avoid flash */
 (() => {
   try {
     const stored = JSON.parse(localStorage.getItem("zimhub-theme"));
@@ -33,7 +38,6 @@ const queryClient = new QueryClient({
   }
 })();
 
-// Register service worker
 registerServiceWorker();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -55,16 +59,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               boxShadow: "var(--shadow-lg)",
             },
             success: {
-              iconTheme: {
-                primary: "var(--accent)",
-                secondary: "white",
-              },
+              iconTheme: { primary: "var(--accent)", secondary: "white" },
             },
             error: {
-              iconTheme: {
-                primary: "var(--danger)",
-                secondary: "white",
-              },
+              iconTheme: { primary: "var(--danger)", secondary: "white" },
             },
           }}
         />

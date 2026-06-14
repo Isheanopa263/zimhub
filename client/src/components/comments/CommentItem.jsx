@@ -13,6 +13,7 @@ import useReplies from "../../hooks/useReplies";
 import useTheme from "../../hooks/useTheme";
 import { getAvatarUrl } from "../../utils/media";
 import ReplyItem from "./ReplyItem";
+import MarkdownText from "../ui/MarkdownText";
 
 const timeAgo = (dateString) => {
   if (!dateString) return "";
@@ -238,18 +239,7 @@ const CommentItem = ({ comment, onDelete, onReply }) => {
               )}
             </div>
 
-            <p
-              style={{
-                fontSize: "14px",
-                color: c.text,
-                margin: 0,
-                lineHeight: 1.5,
-                fontFamily: "Inter, sans-serif",
-                wordBreak: "break-word",
-              }}
-            >
-              {comment.content}
-            </p>
+            <MarkdownText variant="compact">{comment.content}</MarkdownText>
           </div>
 
           <div

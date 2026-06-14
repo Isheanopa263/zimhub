@@ -31,7 +31,11 @@ const registerSchema = z
     fullName: z
       .string()
       .min(2, "Full name must be at least 2 characters")
-      .max(100),
+      .max(100)
+      .regex(
+        /^[a-zA-Z\s'\-.]+$/,
+        "Full name can only contain letters, spaces, hyphens, apostrophes and periods",
+      ),
     username: z
       .string()
       .min(3)

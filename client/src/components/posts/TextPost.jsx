@@ -1,3 +1,5 @@
+import MarkdownText from "../ui/MarkdownText";
+
 const BACKGROUND_STYLES = {
   default: { background: "#ffffff", color: "#0F172A" },
   "gradient-blue": {
@@ -34,32 +36,33 @@ const TextPost = ({ content, backgroundStyle = "default" }) => {
   const style = BACKGROUND_STYLES[backgroundStyle] || BACKGROUND_STYLES.default;
   const isDefault = backgroundStyle === "default";
 
+  // Default style → full markdown
+  if (isDefault) {
+    return (
+      <div style={{ padding: 0 }}>
+        <MarkdownText variant="default">{content}</MarkdownText>
+      </div>
+    );
+  }
+
+  // Styled background → centered, no markdown (simpler)
   return (
     <div
       style={{
         ...style,
         borderRadius: "16px",
-        padding: isDefault ? "0" : "28px 20px",
-        minHeight: isDefault ? "auto" : "140px",
+        padding: "28px 20px",
+        minHeight: "140px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        textAlign: isDefault ? "left" : "center",
-        ...(isDefault ? {} : { boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }),
+        textAlign: "center",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
       }}
     >
-      <p
-        style={{
-          fontSize: isDefault ? "15px" : content.length > 100 ? "16px" : "20px",
-          fontWeight: isDefault ? 400 : 600,
-          lineHeight: 1.6,
-          margin: 0,
-          fontFamily: "Inter, system-ui, sans-serif",
-          wordBreak: "break-word",
-        }}
-      >
+      <MarkdownText variant="centered" textColor={style.color}>
         {content}
-      </p>
+      </MarkdownText>
     </div>
   );
 };
