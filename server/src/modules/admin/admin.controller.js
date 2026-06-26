@@ -2,6 +2,13 @@ const adminService = require("./admin.service");
 const postsService = require("../posts/posts.service");
 const noticesService = require("../notices/notices.service");
 const ApiResponse = require("../../utils/ApiResponse");
+const { logAdminAction } = require("../../utils/auditLog");
+
+// Helper to get IP
+const getIP = (req) =>
+  req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+  req.connection?.remoteAddress ||
+  req.ip;
 
 /* ── Dashboard ── */
 const getDashboard = async (req, res, next) => {
@@ -35,6 +42,16 @@ const toggleSuspension = async (req, res, next) => {
       req.params.id,
       req.user.id,
     );
+
+    // Log it
+    await logAdminAction(
+      req.user.id,
+      result.isSuspended ? "suspend_user" : "unsuspend_user",
+      { type: "user", id: req.params.id },
+      { suspended: result.isSuspended },
+      getIP(req),
+    );
+
     return ApiResponse.success(
       res,
       result.isSuspended ? "User suspended" : "User unsuspended",
@@ -52,6 +69,15 @@ const changeUserRole = async (req, res, next) => {
       req.user.id,
       req.body.role,
     );
+
+    await logAdminAction(
+      req.user.id,
+      "change_user_role",
+      { type: "user", id: req.params.id },
+      { newRole: req.body.role },
+      getIP(req),
+    );
+
     return ApiResponse.success(
       res,
       `User role changed to ${result.role}`,
@@ -65,6 +91,15 @@ const changeUserRole = async (req, res, next) => {
 const deleteUser = async (req, res, next) => {
   try {
     await adminService.deleteUser(req.params.id, req.user.id);
+
+    await logAdminAction(
+      req.user.id,
+      "delete_user",
+      { type: "user", id: req.params.id },
+      { reason: "Admin deletion" },
+      getIP(req),
+    );
+
     return ApiResponse.success(res, "User and all their content deleted");
   } catch (error) {
     next(error);
@@ -88,6 +123,15 @@ const getAllPosts = async (req, res, next) => {
 const deletePost = async (req, res, next) => {
   try {
     await postsService.deletePost(req.params.id, req.user.id, true);
+
+    await logAdminAction(
+      req.user.id,
+      "delete_post",
+      { type: "post", id: req.params.id },
+      null,
+      getIP(req),
+    );
+
     return ApiResponse.success(res, "Post deleted");
   } catch (error) {
     next(error);
@@ -115,6 +159,15 @@ const getAllNotices = async (req, res, next) => {
 const deleteNotice = async (req, res, next) => {
   try {
     await noticesService.deleteNotice(req.params.id, req.user.id, true);
+
+    await logAdminAction(
+      req.user.id,
+      "delete_notice",
+      { type: "notice", id: req.params.id },
+      null,
+      getIP(req),
+    );
+
     return ApiResponse.success(res, "Notice deleted");
   } catch (error) {
     next(error);

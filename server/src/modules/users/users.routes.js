@@ -3,7 +3,11 @@ const router = express.Router();
 
 const controller = require("./users.controller");
 const { authenticate } = require("../../middleware/auth");
-const { uploadAvatar, handleUploadError } = require("../../middleware/upload");
+const {
+  uploadAvatar,
+  verifyImageSignature,
+  handleUploadError,
+} = require("../../middleware/upload");
 const validate = require("../../middleware/validate");
 
 const {
@@ -19,6 +23,7 @@ router.patch(
   uploadAvatar.single("avatar"),
   handleUploadError,
   updateProfileValidator,
+  verifyImageSignature,
   validate,
   controller.updateMyProfile,
 );

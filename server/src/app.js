@@ -78,15 +78,35 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// ─── Static file serving with strong caching ───────────────────────────────────
+// ─── Static file serving ───────────────────────────────────────────────────────
 app.use(
   "/uploads",
   (req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    // Only allow specific origins instead of *
+    const allowedOrigins = [
+      process.env.CLIENT_URL,
+      "http://localhost:5173",
+      "http://localhost:4173",
+    ].filter(Boolean);
+
+    const origin = req.headers.origin;
+    if (
+      origin &&
+      (allowedOrigins.includes(origin) || origin.includes("ngrok"))
+    ) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    } else if (process.env.NODE_ENV !== "production") {
+      // In dev, fall back to allowing
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
+
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    // Cache uploads for 30 days (they're immutable)
     res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
+
+    // Prevent files from being interpreted as HTML (defense in depth)
+    res.setHeader("X-Content-Type-Options", "nosniff");
+
     next();
   },
   express.static(path.join(__dirname, "../uploads"), {

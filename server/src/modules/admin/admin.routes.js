@@ -4,6 +4,7 @@ const { param, body } = require("express-validator");
 
 const controller = require("./admin.controller");
 const { authenticate, requireAdmin } = require("../../middleware/auth");
+const { getAuditLogs } = require("../../utils/auditLog");
 const validate = require("../../middleware/validate");
 const { stats: cacheStats, flush: cacheFlush } = require("../../utils/cache");
 
@@ -85,6 +86,22 @@ router.get("/cache/stats", async (req, res) => {
 router.delete("/cache", async (req, res) => {
   const count = await cacheFlush();
   res.json({ success: true, message: `${count} cache keys cleared` });
+});
+
+// GET /api/v1/admin/audit-log
+router.get("/audit-log", async (req, res, next) => {
+  try {
+    const result = await getAuditLogs({
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 50,
+      adminId: req.query.adminId,
+      action: req.query.action,
+      targetType: req.query.targetType,
+    });
+    return res.json({ success: true, data: result.logs, meta: result });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

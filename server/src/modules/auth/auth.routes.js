@@ -3,8 +3,11 @@ const router = express.Router();
 
 const authController = require("./auth.controller");
 const { authenticate } = require("../../middleware/auth");
-const { authLimiter } = require("../../middleware/rateLimiter");
 const validate = require("../../middleware/validate");
+const {
+  authLimiter,
+  refreshTokenLimiter,
+} = require("../../middleware/rateLimiter");
 
 const {
   registerValidator,
@@ -51,6 +54,7 @@ router.post(
   "/refresh",
   refreshTokenValidator,
   validate,
+  refreshTokenLimiter,
   authController.refresh,
 );
 

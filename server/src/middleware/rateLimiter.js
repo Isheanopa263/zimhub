@@ -90,6 +90,18 @@ const searchLimiter = rateLimit({
   },
 });
 
+// Refresh token rate limiter — prevents abuse
+const refreshTokenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 refreshes per 15 min
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many token refresh attempts. Please log in again.",
+  },
+});
+
 module.exports = {
   generalLimiter,
   authLimiter,
@@ -97,4 +109,5 @@ module.exports = {
   readLimiter,
   createPostLimiter,
   searchLimiter,
+  refreshTokenLimiter,
 };

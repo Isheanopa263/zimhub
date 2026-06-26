@@ -8,6 +8,8 @@ const {
   uploadImage,
   uploadMultipleImages,
   uploadVideo,
+  verifyImageSignature,
+  verifyVideoSignature,
   handleUploadError,
 } = require("../../middleware/upload");
 
@@ -48,6 +50,7 @@ router.post(
   handleUploadError,
   createMediaPostValidator,
   validate,
+  verifyImageSignature,
   postsController.createImagePost,
 );
 
@@ -58,6 +61,7 @@ router.post(
   uploadVideo.single("video"),
   handleUploadError,
   createMediaPostValidator,
+  verifyVideoSignature,
   validate,
   postsController.createVideoPost,
 );

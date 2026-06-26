@@ -6,6 +6,7 @@ const { authenticate } = require("../../middleware/auth");
 const {
   uploadNoticeImage,
   handleUploadError,
+  verifyImageSignature,
 } = require("../../middleware/upload");
 const {
   readLimiter,
@@ -39,6 +40,7 @@ router.post(
   handleUploadError,
   createNoticeValidator,
   validate,
+  verifyImageSignature,
   controller.createNotice,
 );
 
@@ -52,6 +54,7 @@ router.patch(
   uploadNoticeImage.single("poster"),
   handleUploadError,
   updateNoticeValidator,
+  verifyImageSignature,
   validate,
   controller.updateNotice,
 );
