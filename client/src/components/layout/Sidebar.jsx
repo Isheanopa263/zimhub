@@ -12,6 +12,7 @@ import {
   Sun,
   Moon,
   Info,
+  HelpCircle,
 } from "lucide-react";
 
 import useAuthStore from "../../store/authStore";
@@ -291,8 +292,18 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
           />
 
           {/* Create Post Button */}
+          {/* Create Post Button */}
           <button
-            onClick={openCreatePost}
+            onClick={() => {
+              // If not on feed, navigate there first
+              if (window.location.pathname !== "/feed") {
+                navigate("/feed");
+                // Wait a tick for navigation to complete, then open modal
+                setTimeout(() => openCreatePost(), 100);
+              } else {
+                openCreatePost();
+              }
+            }}
             style={{
               display: "flex",
               alignItems: "center",
@@ -466,6 +477,39 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
                 }}
               />
             </div>
+          </button>
+
+          {/* Support */}
+          <button
+            onClick={() => navigate("/support")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "9px 10px",
+              borderRadius: "10px",
+              background: "transparent",
+              color: c.textMuted,
+              fontSize: "14px",
+              fontWeight: 500,
+              border: "none",
+              cursor: "pointer",
+              width: "100%",
+              fontFamily: "Inter, system-ui, sans-serif",
+              transition: "all 0.15s ease",
+              marginBottom: "2px",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = c.bgHover;
+              e.currentTarget.style.color = c.success;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = c.textMuted;
+            }}
+          >
+            <HelpCircle size={16} />
+            <span>Help & Support</span>
           </button>
 
           {/* About */}

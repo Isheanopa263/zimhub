@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Megaphone,
   Shield,
+  LifeBuoy,
 } from "lucide-react";
 
 import useTheme from "../../hooks/useTheme";
@@ -13,6 +14,7 @@ import DashboardTab from "./DashboardTab";
 import UsersTab from "./UsersTab";
 import PostsTab from "./PostsTab";
 import NoticesTab from "./NoticesTab";
+import SupportTab from "./SupportTab";
 import AnnouncementsTab from "./AnnouncementsTab";
 
 const TABS = [
@@ -20,6 +22,7 @@ const TABS = [
   { key: "users", label: "Users", icon: Users },
   { key: "posts", label: "Posts", icon: FileText },
   { key: "notices", label: "Notices", icon: ClipboardList },
+  { key: "support", label: "Support", icon: LifeBuoy },
   { key: "announcements", label: "Announcements", icon: Megaphone },
 ];
 
@@ -37,6 +40,8 @@ const AdminPage = () => {
         return <PostsTab />;
       case "notices":
         return <NoticesTab />;
+      case "support":
+        return <SupportTab />;
       case "announcements":
         return <AnnouncementsTab />;
       default:

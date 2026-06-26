@@ -5,10 +5,12 @@ import TextPost from "./TextPost";
 import ImagePost from "./ImagePost";
 import VideoPost from "./VideoPost";
 import LinkPost from "./LinkPost";
+import HeartBurst from "./HeartBurst";
 import CommentsDrawer from "../comments/CommentsDrawer";
 import useLike from "../../hooks/useLike";
-import useTheme from "../../hooks/useTheme";
+import useDoubleTap from "../../hooks/useDoubleTap";
 import MarkdownText from "../ui/MarkdownText";
+import useTheme from "../../hooks/useTheme";
 
 const PostCard = ({ post, onDelete }) => {
   const { c } = useTheme();
@@ -22,9 +24,28 @@ const PostCard = ({ post, onDelete }) => {
     likeCount,
     loading: likeLoading,
     toggleLike,
+    setIsLiked,
+    setLikeCount,
   } = useLike(post.isLiked || false, post.stats?.likes || 0);
 
   const handleLike = () => toggleLike(post.id);
+
+  /**
+   * Double-tap handler:
+   * - Only LIKES (never unlikes) — to prevent accidental unlikes
+   * - Always shows the heart burst animation
+   */
+  const handleDoubleTap = () => {
+    if (likeLoading) return;
+
+    // Only like if not already liked
+    if (!isLiked) {
+      toggleLike(post.id);
+    }
+    // If already liked, just show the heart animation (don't unlike)
+  };
+
+  const { bursts, handlers } = useDoubleTap(handleDoubleTap);
 
   const renderContent = () => {
     switch (post.type) {
@@ -35,13 +56,19 @@ const PostCard = ({ post, onDelete }) => {
             backgroundStyle={post.text?.backgroundStyle || "default"}
           />
         );
+
       case "image":
         return (
           <div>
             {post.caption && <Caption text={post.caption} c={c} />}
-            <ImagePost imageUrl={post.image?.url} caption={post.caption} />
+            <ImagePost
+              images={post.images}
+              imageUrl={post.image?.url}
+              caption={post.caption}
+            />
           </div>
         );
+
       case "video":
         return (
           <div>
@@ -52,6 +79,7 @@ const PostCard = ({ post, onDelete }) => {
             />
           </div>
         );
+
       case "link":
         return (
           <LinkPost
@@ -62,6 +90,7 @@ const PostCard = ({ post, onDelete }) => {
             caption={post.caption}
           />
         );
+
       default:
         return null;
     }
@@ -81,7 +110,24 @@ const PostCard = ({ post, onDelete }) => {
       >
         <PostAuthor author={post.author} createdAt={post.createdAt} />
 
-        <div style={{ marginBottom: "4px" }}>{renderContent()}</div>
+        {/* Double-tap wrapper around content */}
+        <div
+          {...handlers}
+          style={{
+            position: "relative",
+            marginBottom: "4px",
+            userSelect: "none",
+            WebkitTapHighlightColor: "transparent",
+            cursor: "pointer",
+          }}
+        >
+          {renderContent()}
+
+          {/* Floating heart bursts */}
+          {bursts.map((burst) => (
+            <HeartBurst key={burst.id} id={burst.id} x={burst.x} y={burst.y} />
+          ))}
+        </div>
 
         <PostActions
           post={post}
@@ -105,7 +151,7 @@ const PostCard = ({ post, onDelete }) => {
   );
 };
 
-const Caption = ({ text }) => (
+const Caption = ({ text, c }) => (
   <div style={{ marginBottom: "10px" }}>
     <MarkdownText variant="default">{text}</MarkdownText>
   </div>

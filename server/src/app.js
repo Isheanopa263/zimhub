@@ -125,6 +125,7 @@ app.use(
   "/api/v1/notifications",
   require("./modules/notifications/notifications.routes"),
 );
+app.use("/api/v1/support", require("./modules/support/support.routes"));
 
 // ─── Error handling ────────────────────────────────────────────────────────────
 app.use(notFound);

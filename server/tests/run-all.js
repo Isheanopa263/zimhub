@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const chalk = (() => {
   try {
     return require("chalk");
@@ -22,7 +23,7 @@ const HEALTH_URL =
     "",
   ) + "/health";
 
-/* ─── Test State ──────────────────────────────────────────────── */
+/* ─── Test State ──────────────────────────────────────────────────────────── */
 const state = {
   tokens: { admin: null, user1: null, user2: null },
   users: {},
@@ -35,7 +36,7 @@ const state = {
 
 const results = { passed: 0, failed: 0, skipped: 0, errors: [] };
 
-/* ─── Utilities ───────────────────────────────────────────────── */
+/* ─── Utilities ───────────────────────────────────────────────────────────── */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const request = async (method, path, body = null, token = null) => {
@@ -70,7 +71,7 @@ const assert = (name, condition, details = "") => {
     results.failed++;
     results.errors.push({ name, details });
     console.log(`  ${chalk.red("✗")} ${name}`);
-    if (details) console.log(`    ${chalk.gray(details)}`);
+    if (details) console.log(`    ${chalk.gray(details.substring(0, 200))}`);
     return false;
   }
 };
@@ -91,23 +92,21 @@ const subsection = (title) => {
   console.log(chalk.gray(`\n  ${title}`));
 };
 
-/* ─── Test Suites ─────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   TEST SUITES
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 /* 1. HEALTH & INFRASTRUCTURE */
 const testHealth = async () => {
   section("1. Health & Infrastructure");
 
-  const health = await request("GET", HEALTH_URL.replace(BASE_URL, ""));
-  // Fallback: try direct health URL
-  const directHealth = await request("GET", HEALTH_URL);
+  const health = await request("GET", HEALTH_URL);
 
-  const h = health.ok ? health : directHealth;
-
-  assert("Server is reachable", h.ok || h.status === 200);
+  assert("Server is reachable", health.ok || health.status === 200);
   assert(
     "Health endpoint returns healthy",
-    h.data?.status === "healthy",
-    `Got: ${JSON.stringify(h.data)}`,
+    health.data?.status === "healthy",
+    `Got: ${JSON.stringify(health.data)}`,
   );
 };
 
@@ -167,6 +166,13 @@ const testAuth = async () => {
     state.users.user2 = usernameLogin.data.data.user;
   }
 
+  subsection("Case-insensitive login");
+  const caseLogin = await request("POST", "/auth/login", {
+    identifier: "TENDAI@UNI.AC.ZW", // Uppercase
+    password: "Student@1234",
+  });
+  assert("Case-insensitive email login works", caseLogin.ok);
+
   subsection("Invalid login attempts");
   const wrongPass = await request("POST", "/auth/login", {
     identifier: "tendai@uni.ac.zw",
@@ -197,7 +203,6 @@ const testAuth = async () => {
 
   subsection("Token refresh");
   if (state.tokens.user1) {
-    // Note: We need the refresh token, login again to get a fresh pair
     const login = await request("POST", "/auth/login", {
       identifier: "tendai@uni.ac.zw",
       password: "Student@1234",
@@ -230,31 +235,51 @@ const testAuth = async () => {
   const dupEmail = await request("POST", "/auth/register/request", {
     fullName: "Duplicate User",
     username: `dup_email_${timestamp}`,
-    email: "tendai@uni.ac.zw", // existing email
+    email: "tendai@uni.ac.zw",
     password: "TestPass@123",
   });
   assert(
     "Duplicate email rejected",
     !dupEmail.ok && (dupEmail.status === 409 || dupEmail.status === 429),
-    `Status: ${dupEmail.status}, ${JSON.stringify(dupEmail.data)}`,
+    `Status: ${dupEmail.status}`,
   );
 
-  // Small delay to avoid rate limit interfering
+  // Wait to avoid OTP cooldown rate limit
   await sleep(1500);
 
   subsection("Duplicate username rejection");
-  const dupUsername = await request("POST", "/auth/register/request", {
-    fullName: "Duplicate User",
-    username: "chidi_o", // existing username
-    email: `unique_${timestamp}@example.com`,
-    password: "TestPass@123",
-  });
-  assert(
-    "Duplicate username rejected",
-    !dupUsername.ok &&
-      (dupUsername.status === 409 || dupUsername.status === 429),
-    `Status: ${dupUsername.status}, ${JSON.stringify(dupUsername.data)}`,
-  );
+  if (state.users.user1?.username) {
+    const dupUsername = await request("POST", "/auth/register/request", {
+      fullName: "Duplicate User",
+      username: state.users.user1.username,
+      email: `unique_${timestamp}@example.com`,
+      password: "TestPass@123",
+    });
+    assert(
+      "Duplicate username rejected",
+      !dupUsername.ok &&
+        (dupUsername.status === 409 || dupUsername.status === 429),
+      `Status: ${dupUsername.status}, ${JSON.stringify(dupUsername.data)}`,
+    );
+  } else {
+    skip("Duplicate username rejection", "no reference user");
+  }
+
+  subsection("Case-insensitive duplicate username check");
+  if (state.users.user1?.username) {
+    await sleep(1500);
+    const upperCase = await request("POST", "/auth/register/request", {
+      fullName: "Case Test",
+      username: state.users.user1.username.toUpperCase(),
+      email: `casetest_${timestamp}@example.com`,
+      password: "TestPass@123",
+    });
+    assert(
+      "Uppercase variant of username rejected",
+      !upperCase.ok && (upperCase.status === 409 || upperCase.status === 429),
+      `Status: ${upperCase.status}`,
+    );
+  }
 
   subsection("Password reset OTP");
   const resetOtp = await request("POST", "/auth/password-reset/request", {
@@ -306,12 +331,11 @@ const testProfiles = async () => {
   );
   assert("Non-existent user returns 404", notFound.status === 404);
 
-  subsection("Update profile");
+  subsection("Update profile (with valid name)");
   const formData = new FormData();
   formData.append("fullName", "Tendai Updated");
   formData.append("bio", "Updated bio with **markdown** support");
 
-  // Use raw fetch for multipart
   const updateRes = await fetch(`${BASE_URL}/users/me`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${state.tokens.user1}` },
@@ -327,6 +351,21 @@ const testProfiles = async () => {
     );
     assert("Bio updated", updateData.data?.profile?.bio?.includes("markdown"));
   }
+
+  subsection("Profile update with period in name");
+  const formData2 = new FormData();
+  formData2.append("fullName", "Dr. Tendai M. Updated");
+  formData2.append("bio", "Bio with period");
+
+  const updateRes2 = await fetch(`${BASE_URL}/users/me`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${state.tokens.user1}` },
+    body: formData2,
+  });
+  assert(
+    'Profile accepts period in name (e.g. "Dr. John A. Smith")',
+    updateRes2.ok,
+  );
 };
 
 /* 4. POSTS */
@@ -383,6 +422,22 @@ const testPosts = async () => {
   if (linkPost.ok) {
     state.posts.link = linkPost.data.data.id;
   }
+
+  subsection("Multi-image post endpoint (without files = 400)");
+  const noImagesRes = await fetch(`${BASE_URL}/posts/image`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${state.tokens.user1}` },
+    body: (() => {
+      const fd = new FormData();
+      fd.append("caption", "Test multi-image post");
+      return fd;
+    })(),
+  });
+  assert(
+    "Multi-image endpoint requires files",
+    !noImagesRes.ok && noImagesRes.status === 400,
+    `Status: ${noImagesRes.status}`,
+  );
 
   subsection("Feed includes new posts");
   const updatedFeed = await request(
@@ -518,6 +573,10 @@ const testComments = async () => {
     assert(
       "Author is user2",
       comment.data.data.author?.id === state.users.user2.id,
+    );
+    assert(
+      "Comment has reply count",
+      typeof comment.data.data.replyCount === "number",
     );
   }
 
@@ -714,13 +773,13 @@ const testSearch = async () => {
   assert("Post search works", posts.ok);
 
   subsection("Search notices");
-  const notices = await request(
+  const noticesSearch = await request(
     "GET",
     "/search/notices?q=test",
     null,
     state.tokens.user1,
   );
-  assert("Notice search works", notices.ok);
+  assert("Notice search works", noticesSearch.ok);
 
   subsection("Short query rejection");
   const short = await request("GET", "/search?q=a", null, state.tokens.user1);
@@ -764,7 +823,6 @@ const testNotifications = async () => {
   assert("Returns timestamp", !!poll.data?.data?.timestamp);
 
   subsection("Like creates notification");
-  // user2 likes user1's post (if not already)
   if (state.posts.text) {
     // Unlike first to remove existing
     await request(
@@ -780,7 +838,7 @@ const testNotifications = async () => {
       null,
       state.tokens.user2,
     );
-    await sleep(100);
+    await sleep(150);
 
     const updated = await request(
       "GET",
@@ -1024,7 +1082,9 @@ const cleanup = async () => {
   }
 };
 
-/* ─── Main Runner ─────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIN RUNNER
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const main = async () => {
   const quick = process.argv.includes("--quick");

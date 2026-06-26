@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Mail,
   Info,
+  HelpCircle,
 } from "lucide-react";
 
 import useAuthStore from "../store/authStore";
@@ -116,6 +117,16 @@ const SettingsPage = () => {
           title="Change Password"
           description="Update your account password"
           onClick={() => setPasswordOpen(true)}
+        />
+
+        <SettingButton
+          c={c}
+          icon={HelpCircle}
+          iconColor="#10b981"
+          iconBg="rgba(16, 185, 129, 0.12)"
+          title="Help & Support"
+          description="Get help or send suggestions"
+          onClick={() => navigate("/support")}
         />
       </Section>
 

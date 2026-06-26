@@ -1,12 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-/**
- * Global notification state
- * - unreadCount: number of unread notifications
- * - lastPolledAt: timestamp of last poll (used for /poll endpoint)
- * - recentNotifications: cache of latest notifications for quick display
- */
 const useNotificationStore = create(
   persist(
     (set, get) => ({
@@ -32,7 +26,7 @@ const useNotificationStore = create(
           recentNotifications: [...newOnes, ...state.recentNotifications].slice(
             0,
             20,
-          ), // keep last 20
+          ),
         }));
       },
 
@@ -41,8 +35,9 @@ const useNotificationStore = create(
     {
       name: "zimhub-notifications",
       partialize: (state) => ({
+        // Only persist unread count — NOT lastPolledAt
+        // This way each session starts fresh
         unreadCount: state.unreadCount,
-        lastPolledAt: state.lastPolledAt,
       }),
     },
   ),

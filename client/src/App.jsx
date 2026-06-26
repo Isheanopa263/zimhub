@@ -14,6 +14,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/admin/AdminPage";
+import SupportPage from "./pages/SupportPage";
 
 import useAuthStore from "./store/authStore";
 import useNotificationStore from "./store/notificationStore";
@@ -97,6 +98,7 @@ const App = () => {
           }
         />
       </Route>
+      <Route path="/support" element={<SupportPage />} />
 
       <Route
         path="/"

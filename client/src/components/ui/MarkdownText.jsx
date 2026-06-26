@@ -1,26 +1,25 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeSanitize from "rehype-sanitize";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import useTheme from "../../hooks/useTheme";
+import { useQuickView } from "../../contexts/QuickViewContext";
 
 /**
- * Safely render markdown text
- *
- * Supports:
- *   **bold**, *italic*, ~strikethrough~
- *   # heading, ## heading
- *   `inline code`, ```code blocks```
- *   > blockquote
- *   - lists, 1. ordered lists
- *   [link](url)
- *   @username mentions (custom)
- *   #hashtag (custom)
- *
- * Variants:
- *   default — normal paragraph text
- *   compact — smaller, denser (for comments)
- *   centered — for text-only posts on colored backgrounds
+ * Custom sanitize schema — explicit about what we allow
  */
+const safeSchema = {
+  ...defaultSchema,
+  tagNames: [
+    ...(defaultSchema.tagNames || []),
+    "span", // Allow span for our custom mention/hashtag rendering
+  ],
+  attributes: {
+    ...defaultSchema.attributes,
+    span: ["className", "data*"],
+    a: [...(defaultSchema.attributes?.a || []), "className", "data*"],
+  },
+};
+
 const MarkdownText = ({
   children,
   variant = "default",
@@ -28,6 +27,7 @@ const MarkdownText = ({
   className = "",
 }) => {
   const { c } = useTheme();
+  const { openProfile, openHashtag } = useQuickView();
 
   if (!children) return null;
 
@@ -45,8 +45,96 @@ const MarkdownText = ({
 
   const size = sizes[variant] || sizes.default;
 
-  // Pre-process text to add mentions and hashtags
-  const processed = processCustomSyntax(children);
+  /**
+   * Render text content with @mentions and #hashtags as interactive elements
+   * This bypasses markdown link parsing entirely for safety
+   */
+  const renderTextWithMentions = (text) => {
+    if (typeof text !== "string") return text;
+
+    const parts = [];
+    const regex = /(@[a-zA-Z0-9_]{3,30}|#[a-zA-Z0-9_]{2,30})/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+
+      const token = match[0];
+      const isMention = token.startsWith("@");
+      const value = token.substring(1); // Remove @ or #
+
+      parts.push(
+        <button
+          key={`${match.index}-${token}`}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isMention) {
+              openProfile(value);
+            } else {
+              openHashtag(value);
+            }
+          }}
+          style={{
+            background: `${linkColor}15`,
+            color: linkColor,
+            padding: "1px 6px",
+            borderRadius: "6px",
+            fontWeight: 700,
+            fontSize: "inherit",
+            border: "none",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            display: "inline",
+            textDecoration: "none",
+            transition: "background 0.15s ease",
+            verticalAlign: "baseline",
+            lineHeight: "inherit",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = `${linkColor}30`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = `${linkColor}15`;
+          }}
+        >
+          {token}
+        </button>,
+      );
+
+      lastIndex = match.index + token.length;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
+  /**
+   * Process children to handle mentions/hashtags in any text node
+   */
+  const processChildren = (children) => {
+    if (typeof children === "string") {
+      return renderTextWithMentions(children);
+    }
+    if (Array.isArray(children)) {
+      return children.map((child, idx) => {
+        if (typeof child === "string") {
+          return <span key={idx}>{renderTextWithMentions(child)}</span>;
+        }
+        return child;
+      });
+    }
+    return children;
+  };
 
   return (
     <div
@@ -62,39 +150,46 @@ const MarkdownText = ({
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize]}
+        rehypePlugins={[[rehypeSanitize, safeSchema]]}
         components={{
           p: ({ children }) => (
-            <p style={{ margin: "0 0 8px", lineHeight: 1.55 }}>{children}</p>
+            <p style={{ margin: "0 0 8px", lineHeight: 1.55 }}>
+              {processChildren(children)}
+            </p>
           ),
 
           strong: ({ children }) => (
             <strong style={{ fontWeight: 700, color: finalColor }}>
-              {children}
+              {processChildren(children)}
             </strong>
           ),
 
           em: ({ children }) => (
-            <em style={{ fontStyle: "italic" }}>{children}</em>
+            <em style={{ fontStyle: "italic" }}>{processChildren(children)}</em>
           ),
 
-          del: ({ children }) => <del style={{ opacity: 0.7 }}>{children}</del>,
-
-          a: ({ href, children }) => (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: linkColor,
-                textDecoration: "underline",
-                textUnderlineOffset: "2px",
-                fontWeight: 600,
-              }}
-            >
-              {children}
-            </a>
+          del: ({ children }) => (
+            <del style={{ opacity: 0.7 }}>{processChildren(children)}</del>
           ),
+
+          a: ({ href, children }) => {
+            // Normal external links (markdown [text](url) syntax)
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: linkColor,
+                  textDecoration: "underline",
+                  textUnderlineOffset: "2px",
+                  fontWeight: 600,
+                }}
+              >
+                {children}
+              </a>
+            );
+          },
 
           ul: ({ children }) => (
             <ul
@@ -121,7 +216,7 @@ const MarkdownText = ({
           ),
 
           li: ({ children }) => (
-            <li style={{ marginBottom: "2px" }}>{children}</li>
+            <li style={{ marginBottom: "2px" }}>{processChildren(children)}</li>
           ),
 
           h1: ({ children }) => (
@@ -133,7 +228,7 @@ const MarkdownText = ({
                 color: finalColor,
               }}
             >
-              {children}
+              {processChildren(children)}
             </h3>
           ),
 
@@ -146,7 +241,7 @@ const MarkdownText = ({
                 color: finalColor,
               }}
             >
-              {children}
+              {processChildren(children)}
             </h4>
           ),
 
@@ -159,7 +254,7 @@ const MarkdownText = ({
                 color: finalColor,
               }}
             >
-              {children}
+              {processChildren(children)}
             </h5>
           ),
 
@@ -173,7 +268,7 @@ const MarkdownText = ({
                 color: c.textSec,
               }}
             >
-              {children}
+              {processChildren(children)}
             </blockquote>
           ),
 
@@ -225,29 +320,9 @@ const MarkdownText = ({
           ),
         }}
       >
-        {processed}
+        {children}
       </ReactMarkdown>
     </div>
-  );
-};
-
-/**
- * Pre-process custom syntax:
- *   @username  →  [@username](/profile/username)
- *   #hashtag   →  [#hashtag](/search?q=hashtag&tab=posts)
- */
-const processCustomSyntax = (text) => {
-  if (typeof text !== "string") return text;
-
-  return (
-    text
-      // @mentions
-      .replace(/(^|\s)@([a-zA-Z0-9_]{3,30})/g, "$1[@$2](/profile/$2)")
-      // #hashtags
-      .replace(
-        /(^|\s)#([a-zA-Z0-9_]{2,30})/g,
-        "$1[#$2](/search?q=$2&tab=posts)",
-      )
   );
 };
 

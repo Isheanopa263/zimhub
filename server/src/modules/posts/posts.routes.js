@@ -3,11 +3,14 @@ const router = express.Router();
 
 const postsController = require("./posts.controller");
 const { authenticate } = require("../../middleware/auth");
+
 const {
   uploadImage,
+  uploadMultipleImages,
   uploadVideo,
   handleUploadError,
 } = require("../../middleware/upload");
+
 const {
   uploadLimiter,
   readLimiter,
@@ -41,7 +44,7 @@ router.post(
   "/image",
   createPostLimiter,
   uploadLimiter,
-  uploadImage.single("image"),
+  uploadMultipleImages.array("images", 10),
   handleUploadError,
   createMediaPostValidator,
   validate,

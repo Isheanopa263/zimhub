@@ -76,6 +76,15 @@ const uploadImage = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
+const uploadMultipleImages = multer({
+  storage: createStorage("images"),
+  fileFilter: imageFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB per image
+    files: 10, // Max 10 images
+  },
+});
+
 const uploadVideo = multer({
   storage: createStorage("videos"),
   fileFilter: videoFilter,
@@ -123,6 +132,7 @@ const handleUploadError = (err, req, res, next) => {
 
 module.exports = {
   uploadImage,
+  uploadMultipleImages,
   uploadVideo,
   uploadAvatar,
   uploadNoticeImage,

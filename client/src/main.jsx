@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import App from "./App";
 import { registerServiceWorker } from "./utils/pwa";
 import { applyTheme } from "./store/themeStore";
+import { QuickViewProvider } from "./contexts/QuickViewContext";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -43,29 +44,36 @@ registerServiceWorker();
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: "var(--bg-card)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--border-default)",
-              borderRadius: "12px",
-              fontSize: "14px",
-              padding: "12px 16px",
-              boxShadow: "var(--shadow-lg)",
-            },
-            success: {
-              iconTheme: { primary: "var(--accent)", secondary: "white" },
-            },
-            error: {
-              iconTheme: { primary: "var(--danger)", secondary: "white" },
-            },
-          }}
-        />
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <QuickViewProvider>
+          <App />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: "var(--bg-card)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border-default)",
+                borderRadius: "12px",
+                fontSize: "14px",
+                padding: "12px 16px",
+                boxShadow: "var(--shadow-lg)",
+              },
+              success: {
+                iconTheme: { primary: "var(--accent)", secondary: "white" },
+              },
+              error: {
+                iconTheme: { primary: "var(--danger)", secondary: "white" },
+              },
+            }}
+          />
+        </QuickViewProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>,

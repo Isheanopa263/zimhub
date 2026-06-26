@@ -426,16 +426,29 @@ const getAllPostsForModeration = async ({
       u.id AS user_id, u.username,
       pr.full_name, pr.avatar_url,
       pt.content AS text_content,
-      pi.image_url,
       pv.video_url,
       pl.title AS link_title, pl.url AS link_url,
+      
+      -- Get FIRST image only (for preview) using subquery — no duplication
+      (
+        SELECT image_url FROM post_images
+        WHERE post_id = p.id
+        ORDER BY display_order ASC
+        LIMIT 1
+      ) AS image_url,
+      
+      -- Count images for badge
+      (
+        SELECT COUNT(*)::int FROM post_images
+        WHERE post_id = p.id
+      ) AS image_count,
+      
       COALESCE(lc.like_count, 0)::int AS like_count,
       COALESCE(cc.comment_count, 0)::int AS comment_count
     FROM posts p
     JOIN users u ON u.id = p.user_id
     LEFT JOIN profiles pr ON pr.user_id = p.user_id
     LEFT JOIN post_text_posts pt ON pt.post_id = p.id
-    LEFT JOIN post_images pi ON pi.post_id = p.id
     LEFT JOIN post_videos pv ON pv.post_id = p.id
     LEFT JOIN post_links pl ON pl.post_id = p.id
     LEFT JOIN (SELECT post_id, COUNT(*) AS like_count FROM likes GROUP BY post_id) lc ON lc.post_id = p.id
@@ -462,6 +475,7 @@ const getAllPostsForModeration = async ({
       preview: {
         text: p.text_content,
         image: p.image_url ? getFileUrl(p.image_url, "images") : null,
+        imageCount: p.image_count || 0, // ← New: show "5 images" badge
         video: p.video_url ? getFileUrl(p.video_url, "videos") : null,
         linkTitle: p.link_title,
         linkUrl: p.link_url,

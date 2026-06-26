@@ -4,12 +4,19 @@ const ApiError = require("../../utils/ApiError");
 
 const createImagePost = async (req, res, next) => {
   try {
-    if (!req.file) throw ApiError.badRequest("Image file is required");
+    // req.files (plural) — array from multer.array()
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      throw ApiError.badRequest("At least one image is required");
+    }
+
     const post = await postsService.createImagePost(
       req.user.id,
       req.body.caption,
-      req.file,
+      files,
     );
+
     return ApiResponse.created(res, "Image post created", post);
   } catch (error) {
     next(error);

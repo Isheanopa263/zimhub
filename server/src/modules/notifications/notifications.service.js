@@ -96,16 +96,21 @@ const getUnreadCount = async (userId) => {
 
 /**
  * Get notifications newer than a timestamp (for polling)
+ * Only returns UNREAD notifications to avoid re-popping read ones
  */
 const getNewNotifications = async (userId, sinceTimestamp) => {
   const since = sinceTimestamp ? new Date(sinceTimestamp) : new Date(0);
 
+  // ONLY fetch unread notifications created after `since`
+  // This prevents already-read notifications from re-appearing as toasts
   const result = await query(
     `SELECT 
         n.id, n.type, n.title, n.message, n.is_read,
         n.reference_id, n.reference_type, n.created_at
      FROM notifications n
-     WHERE n.user_id = $1 AND n.created_at > $2
+     WHERE n.user_id = $1
+       AND n.created_at > $2
+       AND n.is_read = false              -- ← Critical: only unread
      ORDER BY n.created_at DESC
      LIMIT 20`,
     [userId, since],

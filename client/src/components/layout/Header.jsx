@@ -10,6 +10,7 @@ import {
   Sun,
   Moon,
   Info,
+  HelpCircle,
 } from "lucide-react";
 
 import useUIStore from "../../store/uiStore";
@@ -353,6 +354,14 @@ const Header = ({ unreadNotifications = 0 }) => {
                   c={c}
                 />
 
+                <MenuItem
+                  icon={HelpCircle}
+                  label="Help & Support"
+                  color={c.success}
+                  onClick={() => handleNav("/support")}
+                  c={c}
+                />
+
                 {isAdmin && (
                   <MenuItem
                     icon={Shield}
@@ -362,7 +371,6 @@ const Header = ({ unreadNotifications = 0 }) => {
                     c={c}
                   />
                 )}
-
                 <div
                   style={{
                     height: "1px",

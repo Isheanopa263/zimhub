@@ -17,8 +17,19 @@ const POST_SELECT_SQL = `
     pr.full_name,
     pr.avatar_url,
     
-    pi.image_url,
-    pi.file_size AS image_file_size,
+    -- Multi-image support: aggregate as JSON array
+    (
+      SELECT json_agg(
+        json_build_object(
+          'url',  pi.image_url,
+          'size', pi.file_size,
+          'order', pi.display_order
+        )
+        ORDER BY pi.display_order ASC
+      )
+      FROM post_images pi
+      WHERE pi.post_id = p.id
+    ) AS images,
     
     pv.video_url,
     pv.thumbnail_url,
@@ -41,7 +52,6 @@ const POST_SELECT_SQL = `
   FROM posts p
   JOIN users u ON u.id = p.user_id
   LEFT JOIN profiles pr ON pr.user_id = p.user_id
-  LEFT JOIN post_images pi ON pi.post_id = p.id
   LEFT JOIN post_videos pv ON pv.post_id = p.id
   LEFT JOIN post_text_posts pt ON pt.post_id = p.id
   LEFT JOIN post_links pl ON pl.post_id = p.id
@@ -59,12 +69,27 @@ const POST_SELECT_SQL = `
   LEFT JOIN likes ul ON ul.post_id = p.id AND ul.user_id = $1
 `;
 
-// ─── Create Image Post ─────────────────────────────────────────────────────────
-const createImagePost = async (userId, caption, file) => {
+/**
+ * Create an image post (single or multi-image carousel)
+ * @param {string} userId
+ * @param {string} caption
+ * @param {Array<File>} files - Array of uploaded files (1-10)
+ */
+const createImagePost = async (userId, caption, files) => {
+  if (!files || files.length === 0) {
+    throw ApiError.badRequest("At least one image is required");
+  }
+
+  if (files.length > 10) {
+    throw ApiError.badRequest("Maximum 10 images per post");
+  }
+
   const client = await getClient();
+
   try {
     await client.query("BEGIN");
 
+    // Create base post
     const postResult = await client.query(
       `INSERT INTO posts (user_id, post_type, caption)
        VALUES ($1, 'image', $2)
@@ -74,20 +99,26 @@ const createImagePost = async (userId, caption, file) => {
 
     const postId = postResult.rows[0].id;
 
-    await client.query(
-      `INSERT INTO post_images (post_id, image_url, file_size)
-       VALUES ($1, $2, $3)`,
-      [postId, file.filename, file.size],
-    );
+    // Insert all images with display order
+    for (let i = 0; i < files.length; i++) {
+      await client.query(
+        `INSERT INTO post_images (post_id, image_url, file_size, display_order)
+         VALUES ($1, $2, $3, $4)`,
+        [postId, files[i].filename, files[i].size, i],
+      );
+    }
 
     await client.query("COMMIT");
     return await getPostById(postId, userId);
   } catch (error) {
     await client.query("ROLLBACK");
-    if (file?.filename) deleteFile(file.filename, "images");
+    // Clean up uploaded files on error
+    if (files) {
+      files.forEach((f) => {
+        if (f?.filename) deleteFile(f.filename, "images");
+      });
+    }
     throw error;
-  } finally {
-    client.release();
   }
 };
 
@@ -324,12 +355,23 @@ const formatPost = (row) => {
   };
 
   switch (row.post_type) {
-    case "image":
-      post.image = {
-        url: getFileUrl(row.image_url, "images"),
-        fileSize: row.image_file_size,
-      };
+    case "image": {
+      // Multiple images stored in JSON array
+      const images = (row.images || []).map((img) => ({
+        url: getFileUrl(img.url, "images"),
+        fileSize: img.size,
+        order: img.order,
+      }));
+
+      post.images = images; // New: array of all images
+      post.imageCount = images.length; // Convenience field
+
+      // Backward compatibility — first image as "image"
+      if (images.length > 0) {
+        post.image = images[0];
+      }
       break;
+    }
 
     case "video":
       post.video = {
