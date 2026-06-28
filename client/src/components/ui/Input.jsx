@@ -12,6 +12,7 @@ const Input = forwardRef(
       helperText,
       icon: Icon,
       required,
+      hasServerError = false,
       ...props
     },
     ref,
@@ -22,6 +23,8 @@ const Input = forwardRef(
 
     const isPassword = type === "password";
     const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+
+    const hasError = !!error || hasServerError;
 
     return (
       <div style={{ marginBottom: "0px", width: "100%" }}>
@@ -58,7 +61,7 @@ const Input = forwardRef(
                 left: "14px",
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: error ? c.danger : isFocused ? c.accent : c.textMuted,
+                color: hasError ? c.danger : isFocused ? c.accent : c.textMuted,
                 transition: "color 0.15s ease",
                 pointerEvents: "none",
               }}
@@ -80,15 +83,17 @@ const Input = forwardRef(
               paddingRight: isPassword ? "42px" : "16px",
               borderRadius: "12px",
               border: `2px solid ${
-                error ? c.danger : isFocused ? c.accent : c.borderStrong
+                hasError ? c.danger : isFocused ? c.accent : c.borderStrong
               }`,
-              background: error ? c.dangerLight : c.bgInput,
+              background: hasError ? c.dangerLight : c.bgInput,
               color: c.text,
               fontSize: "14px",
               fontFamily: "Inter, system-ui, sans-serif",
               outline: "none",
               transition: "all 0.15s ease",
-              boxShadow: isFocused ? `0 0 0 3px ${c.accent}20` : "none",
+              boxShadow: isFocused
+                ? `0 0 0 3px ${hasError ? c.danger : c.accent}20`
+                : "none",
             }}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}

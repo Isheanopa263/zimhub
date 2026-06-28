@@ -1,48 +1,117 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AtSign, Lock, ArrowRight } from "lucide-react";
+import { AtSign, Lock, ArrowRight, X } from "lucide-react";
 
-import useAuth from "../../hooks/useAuth";
 import useAuthStore from "../../store/authStore";
 import useTheme from "../../hooks/useTheme";
+import { authApi } from "../../api/endpoints/auth.api";
 
 import Logo from "../../components/ui/Logo";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ThemeToggleButton from "../../components/ui/ThemeToggleButton";
 
-/* ─── Validation Schema ─────────────────────────────────────────────────────── */
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email or username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
-/* ─── Component ─────────────────────────────────────────────────────────────── */
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
-  const { login, isLoading } = useAuth();
+  const { isAuthenticated, login } = useAuthStore();
   const { c, isDark } = useTheme();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [errorType, setErrorType] = useState(null);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: { identifier: "", password: "" },
   });
 
-  /* Redirect if already logged in */
+  const watchedIdentifier = watch("identifier");
+  const watchedPassword = watch("password");
+
+  useEffect(() => {
+    if (error) {
+      setError(null);
+      setErrorType(null);
+    }
+    // eslint-disable-next-line
+  }, [watchedIdentifier, watchedPassword]);
+
   useEffect(() => {
     if (isAuthenticated) navigate("/feed", { replace: true });
   }, [isAuthenticated, navigate]);
 
   const onSubmit = async (data) => {
-    await login(data);
+    setLoading(true);
+    setError(null);
+    setErrorType(null);
+
+    try {
+      const response = await authApi.login(data);
+
+      const accessToken = response?.data?.accessToken;
+      const refreshToken = response?.data?.refreshToken;
+      const user = response?.data?.user;
+
+      if (!accessToken || !user) {
+        setError("Server returned an unexpected response. Please try again.");
+        setErrorType("unknown");
+        return;
+      }
+
+      login(user, accessToken, refreshToken);
+      navigate("/feed");
+    } catch (err) {
+      const status = err?.response?.status;
+      const serverMessage = err?.response?.data?.message;
+
+      if (status === 429) {
+        setError(
+          serverMessage ||
+            "Too many login attempts. Please wait 15 minutes before trying again.",
+        );
+        setErrorType("rate_limit");
+      } else if (status === 401) {
+        setError(
+          "Incorrect email/username or password. Please check your credentials and try again.",
+        );
+        setErrorType("credentials");
+      } else if (status === 403) {
+        setError(
+          serverMessage ||
+            "Your account has been suspended. Please contact admin.",
+        );
+        setErrorType("suspended");
+      } else if (status === 400) {
+        setError(serverMessage || "Invalid login request.");
+        setErrorType("credentials");
+      } else if (status >= 500) {
+        setError("Server error. Please try again in a moment.");
+        setErrorType("unknown");
+      } else if (!err.response) {
+        setError(
+          "Cannot connect to server. Please check your internet connection.",
+        );
+        setErrorType("network");
+      } else {
+        setError(serverMessage || "Login failed. Please try again.");
+        setErrorType("unknown");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -61,10 +130,9 @@ const LoginPage = () => {
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
-      {/* ── Theme Toggle ── */}
       <ThemeToggleButton position="top-right" />
 
-      {/* ── Background blobs ── */}
+      {/* Background blobs */}
       <div
         style={{
           position: "absolute",
@@ -92,7 +160,6 @@ const LoginPage = () => {
         }}
       />
 
-      {/* ── Card ── */}
       <div
         style={{
           width: "100%",
@@ -133,7 +200,7 @@ const LoginPage = () => {
           </div>
 
           {/* Heading */}
-          <div style={{ marginBottom: "28px" }}>
+          <div style={{ marginBottom: "24px" }}>
             <h1
               style={{
                 fontSize: "26px",
@@ -155,6 +222,19 @@ const LoginPage = () => {
             </p>
           </div>
 
+          {/* Error Banner */}
+          {error && (
+            <ErrorBanner
+              error={error}
+              type={errorType}
+              onDismiss={() => {
+                setError(null);
+                setErrorType(null);
+              }}
+              c={c}
+            />
+          )}
+
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <div
@@ -169,6 +249,7 @@ const LoginPage = () => {
                 error={errors.identifier?.message}
                 required
                 autoComplete="username"
+                hasServerError={errorType === "credentials"}
                 {...register("identifier")}
               />
 
@@ -181,11 +262,11 @@ const LoginPage = () => {
                 error={errors.password?.message}
                 required
                 autoComplete="current-password"
+                hasServerError={errorType === "credentials"}
                 {...register("password")}
               />
             </div>
 
-            {/* Forgot password */}
             <div
               style={{
                 display: "flex",
@@ -207,11 +288,16 @@ const LoginPage = () => {
               </Link>
             </div>
 
-            {/* Submit button */}
             <div style={{ marginTop: "24px" }}>
-              <Button type="submit" fullWidth isLoading={isLoading} size="lg">
-                Sign In
-                {!isLoading && <ArrowRight size={16} />}
+              <Button
+                type="submit"
+                fullWidth
+                isLoading={loading}
+                size="lg"
+                disabled={loading || errorType === "rate_limit"}
+              >
+                {loading ? "Signing in..." : "Sign In"}
+                {!loading && <ArrowRight size={16} />}
               </Button>
             </div>
           </form>
@@ -238,7 +324,6 @@ const LoginPage = () => {
             <div style={{ flex: 1, height: "1px", background: c.border }} />
           </div>
 
-          {/* Register link */}
           <Link to="/register" style={{ textDecoration: "none" }}>
             <Button variant="outline" fullWidth size="lg">
               Create Account
@@ -246,7 +331,6 @@ const LoginPage = () => {
           </Link>
         </div>
 
-        {/* Footer */}
         <p
           style={{
             textAlign: "center",
@@ -258,6 +342,167 @@ const LoginPage = () => {
           ZimHub — Exclusive to university students
         </p>
       </div>
+    </div>
+  );
+};
+
+/* ─── Error Banner ─── */
+const ErrorBanner = ({ error, type, onDismiss, c }) => {
+  const config = {
+    credentials: {
+      bg: c.dangerLight,
+      border: c.danger,
+      icon: "🔒",
+      title: "Login failed",
+    },
+    suspended: {
+      bg: c.dangerLight,
+      border: c.danger,
+      icon: "🚫",
+      title: "Account suspended",
+    },
+    rate_limit: {
+      bg: c.warningLight,
+      border: c.warning,
+      icon: "⏰",
+      title: "Too many attempts",
+    },
+    network: {
+      bg: c.warningLight,
+      border: c.warning,
+      icon: "🌐",
+      title: "Connection error",
+    },
+    unknown: {
+      bg: c.dangerLight,
+      border: c.danger,
+      icon: "⚠️",
+      title: "Something went wrong",
+    },
+  };
+
+  const style = config[type] || config.unknown;
+
+  return (
+    <div
+      role="alert"
+      style={{
+        background: style.bg,
+        border: `1px solid ${style.border}40`,
+        borderLeft: `4px solid ${style.border}`,
+        borderRadius: "12px",
+        padding: "14px 14px 14px 12px",
+        marginBottom: "20px",
+        display: "flex",
+        gap: "12px",
+        alignItems: "flex-start",
+        animation: "shake 0.4s ease",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "20px",
+          flexShrink: 0,
+          lineHeight: 1,
+          marginTop: "2px",
+        }}
+      >
+        {style.icon}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p
+          style={{
+            fontSize: "13px",
+            fontWeight: 800,
+            color: style.border,
+            margin: "0 0 4px",
+            fontFamily: "Inter, sans-serif",
+          }}
+        >
+          {style.title}
+        </p>
+        <p
+          style={{
+            fontSize: "13px",
+            color: c.text,
+            margin: 0,
+            lineHeight: 1.5,
+            fontFamily: "Inter, sans-serif",
+          }}
+        >
+          {error}
+        </p>
+
+        {type === "credentials" && (
+          <div
+            style={{
+              marginTop: "8px",
+              display: "flex",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
+            <Link
+              to="/forgot-password"
+              style={{
+                fontSize: "12px",
+                color: style.border,
+                fontWeight: 700,
+                textDecoration: "underline",
+                textUnderlineOffset: "2px",
+              }}
+            >
+              Forgot password?
+            </Link>
+            <Link
+              to="/register"
+              style={{
+                fontSize: "12px",
+                color: style.border,
+                fontWeight: 700,
+                textDecoration: "underline",
+                textUnderlineOffset: "2px",
+              }}
+            >
+              Create account
+            </Link>
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={onDismiss}
+        aria-label="Dismiss error"
+        style={{
+          background: "transparent",
+          border: "none",
+          padding: "4px",
+          cursor: "pointer",
+          color: style.border,
+          opacity: 0.6,
+          borderRadius: "6px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          transition: "opacity 0.15s ease",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+      >
+        <X size={14} />
+      </button>
+
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%      { transform: translateX(-4px); }
+          40%      { transform: translateX(4px); }
+          60%      { transform: translateX(-2px); }
+          80%      { transform: translateX(2px); }
+        }
+      `}</style>
     </div>
   );
 };

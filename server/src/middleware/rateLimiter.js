@@ -24,16 +24,27 @@ const generalLimiter = rateLimit({
 });
 
 // ─── Auth endpoints ────────────────────────────────────────────────────────────
-// 20 attempts per 15 minutes (was 10)
-// Students logging in on multiple devices won't get blocked
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20, // was 10, now 20
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+
+  // Skip successful logins — only count failures
+  skipSuccessfulRequests: true,
+
+  // Custom message
   message: {
     success: false,
-    message: "Too many login attempts. Please wait 15 minutes.",
+    message:
+      "Too many failed login attempts. Please wait 15 minutes before trying again.",
+  },
+
+  // Better key — include the email/identifier so attacks on different accounts don't combine
+  keyGenerator: (req) => {
+    const ip = req.ip || "unknown";
+    const identifier = req.body?.identifier?.toLowerCase() || "no-identifier";
+    return `${ip}:${identifier}`;
   },
 });
 
