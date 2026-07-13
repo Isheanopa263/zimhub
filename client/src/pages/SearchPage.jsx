@@ -411,6 +411,17 @@ const SearchPage = () => {
       )}
     </div>
   );
+  /* Listen for nav-tap-refresh */
+  useEffect(() => {
+    const handleRefresh = (e) => {
+      if (e.detail?.page === "/search") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+
+    window.addEventListener("nav-tap-refresh", handleRefresh);
+    return () => window.removeEventListener("nav-tap-refresh", handleRefresh);
+  }, []);
 };
 
 const Section = ({ title, count, children, showMore, onShowMore, c }) => (

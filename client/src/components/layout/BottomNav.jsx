@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { Home, Search, Bell, User, ClipboardList } from "lucide-react";
 import useTheme from "../../hooks/useTheme";
 
@@ -12,6 +12,31 @@ const navItems = [
 
 const BottomNav = ({ unreadNotifications = 0 }) => {
   const { c } = useTheme();
+  const location = useLocation();
+
+  const handleNavClick = (e, to) => {
+    const isCurrentPage = location.pathname === to;
+
+    if (isCurrentPage) {
+      e.preventDefault();
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // For the immersive feed, scroll the snap container
+      const snapContainer = document.querySelector(".hide-scrollbar");
+      if (snapContainer) {
+        snapContainer.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      // Dispatch custom event so pages can handle refresh
+      window.dispatchEvent(
+        new CustomEvent("nav-tap-refresh", {
+          detail: { page: to },
+        }),
+      );
+    }
+  };
 
   return (
     <nav
@@ -31,7 +56,12 @@ const BottomNav = ({ unreadNotifications = 0 }) => {
       }}
     >
       {navItems.map(({ to, icon: Icon, label, badge }) => (
-        <NavLink key={to} to={to} style={{ textDecoration: "none", flex: 1 }}>
+        <NavLink
+          key={to}
+          to={to}
+          style={{ textDecoration: "none", flex: 1 }}
+          onClick={(e) => handleNavClick(e, to)}
+        >
           {({ isActive }) => (
             <div
               style={{

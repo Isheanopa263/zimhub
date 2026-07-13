@@ -264,6 +264,18 @@ const NotificationsPage = () => {
       )}
     </div>
   );
+  /* Listen for nav-tap-refresh */
+  useEffect(() => {
+    const handleRefresh = (e) => {
+      if (e.detail?.page === "/notifications") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        loadNotifications();
+      }
+    };
+
+    window.addEventListener("nav-tap-refresh", handleRefresh);
+    return () => window.removeEventListener("nav-tap-refresh", handleRefresh);
+  }, [showUnreadOnly]);
 };
 
 /* ─── Notification Item ────────────────────────────────────────────────────── */

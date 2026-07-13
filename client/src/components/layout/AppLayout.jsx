@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
@@ -21,6 +21,7 @@ const useWindowWidth = () => {
 };
 
 const AppLayout = () => {
+  const location = useLocation();
   const width = useWindowWidth();
   const isMobile = width < 768;
   const isDesktop = width >= 1024;
@@ -30,6 +31,9 @@ const AppLayout = () => {
   const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   useNotificationPolling();
+
+  // Special layout for feed page (full-screen immersive)
+  const isFeed = location.pathname === "/feed";
 
   return (
     <div
@@ -48,7 +52,14 @@ const AppLayout = () => {
           minWidth: 0,
           display: "flex",
           flexDirection: "column",
-          maxWidth: isDesktop ? "680px" : "100%",
+          // Feed gets more room since it's immersive
+          maxWidth: isFeed
+            ? isDesktop
+              ? "540px"
+              : "100%"
+            : isDesktop
+              ? "680px"
+              : "100%",
           margin: isDesktop ? "0 auto" : "0",
           width: "100%",
         }}
@@ -58,7 +69,7 @@ const AppLayout = () => {
         <div
           style={{
             flex: 1,
-            padding: isMobile ? "0 16px 80px" : "20px 16px",
+            padding: isFeed ? "0" : isMobile ? "0 16px 80px" : "20px 16px",
             width: "100%",
           }}
         >
@@ -66,7 +77,8 @@ const AppLayout = () => {
         </div>
       </main>
 
-      {showRightSidebar && <RightSidebar />}
+      {/* Hide right sidebar on feed for more immersion */}
+      {showRightSidebar && !isFeed && <RightSidebar />}
       {isMobile && <BottomNav unreadNotifications={unreadCount} />}
     </div>
   );

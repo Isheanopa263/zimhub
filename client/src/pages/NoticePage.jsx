@@ -351,6 +351,18 @@ const NoticePage = () => {
       />
     </div>
   );
+  /* Listen for nav-tap-refresh */
+  useEffect(() => {
+    const handleRefresh = (e) => {
+      if (e.detail?.page === "/notices") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        loadNotices(buildFilters());
+      }
+    };
+
+    window.addEventListener("nav-tap-refresh", handleRefresh);
+    return () => window.removeEventListener("nav-tap-refresh", handleRefresh);
+  }, [activeTab, searchQuery]);
 };
 
 const EmptyState = ({ searchQuery, activeTab, onCreateClick, c }) => {

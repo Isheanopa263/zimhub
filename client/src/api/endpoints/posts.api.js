@@ -46,21 +46,48 @@ export const postsApi = {
   },
 
   /**
-   * Create image post
+   * Create image post (multi-image carousel)
+   *
+   * FormData must include:
+   *   - images: File[] (field name 'images', up to 10 files)
+   *   - caption: string (optional)
    */
   createImagePost: async (formData) => {
     const response = await api.post("/posts/image", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      // Mobile uploads can be slow — give them 60 seconds
+      timeout: 60000,
+      // Track upload progress (can be used for progress bar later)
+      onUploadProgress: (progressEvent) => {
+        // Uncomment to log progress:
+        // const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        // console.log(`Upload: ${percent}%`);
+      },
     });
     return response.data;
   },
 
   /**
    * Create video post
+   *
+   * FormData must include:
+   *   - video: File (field name 'video', single file)
+   *   - caption: string (optional)
    */
   createVideoPost: async (formData) => {
     const response = await api.post("/posts/video", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      // Videos can be 100MB — give them 2 minutes
+      timeout: 120000,
+      onUploadProgress: (progressEvent) => {
+        // Uncomment to log progress:
+        // const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        // console.log(`Upload: ${percent}%`);
+      },
     });
     return response.data;
   },
@@ -70,6 +97,16 @@ export const postsApi = {
    */
   deletePost: async (postId) => {
     const response = await api.delete(`/posts/${postId}`);
+    return response.data;
+  },
+
+  /**
+   * Check for new posts since timestamp
+   */
+  checkNew: async (since) => {
+    const response = await api.get("/posts/check-new", {
+      params: { since },
+    });
     return response.data;
   },
 };

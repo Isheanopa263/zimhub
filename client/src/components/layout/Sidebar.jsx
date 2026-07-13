@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Home,
   Search,
@@ -31,93 +31,119 @@ const navItems = [
 ];
 
 /* ─── Sidebar Nav Item ─────────────────────────────────────────── */
-const SidebarItem = ({ to, icon: Icon, label, badge, unreadCount = 0, c }) => (
-  <NavLink to={to} style={{ textDecoration: "none" }}>
-    {({ isActive }) => (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          padding: "12px 14px",
-          borderRadius: "14px",
-          background: isActive ? c.accentLight : "transparent",
-          color: isActive ? c.accent : c.textTer,
-          fontWeight: isActive ? 700 : 500,
-          fontSize: "15px",
-          transition: "all 0.15s ease",
-          cursor: "pointer",
-          position: "relative",
-          border: isActive
-            ? `1px solid ${c.accent}30`
-            : "1px solid transparent",
-        }}
-        onMouseEnter={(e) => {
-          if (!isActive) {
-            e.currentTarget.style.background = c.bgHover;
-            e.currentTarget.style.color = c.text;
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isActive) {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = c.textTer;
-          }
-        }}
-      >
-        {/* Icon with badge */}
-        <div style={{ position: "relative", flexShrink: 0 }}>
-          <Icon size={20} style={{ strokeWidth: isActive ? 2.5 : 2 }} />
+const SidebarItem = ({ to, icon: Icon, label, badge, unreadCount = 0, c }) => {
+  const location = useLocation();
 
-          {badge && unreadCount > 0 && (
+  const handleClick = (e) => {
+    const isCurrentPage = location.pathname === to;
+
+    if (isCurrentPage) {
+      e.preventDefault();
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // For the immersive feed
+      const snapContainer = document.querySelector(".hide-scrollbar");
+      if (snapContainer) {
+        snapContainer.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      // Dispatch custom event for page refresh
+      window.dispatchEvent(
+        new CustomEvent("nav-tap-refresh", {
+          detail: { page: to },
+        }),
+      );
+    }
+  };
+
+  return (
+    <NavLink to={to} style={{ textDecoration: "none" }} onClick={handleClick}>
+      {({ isActive }) => (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "12px 14px",
+            borderRadius: "14px",
+            background: isActive ? c.accentLight : "transparent",
+            color: isActive ? c.accent : c.textTer,
+            fontWeight: isActive ? 700 : 500,
+            fontSize: "15px",
+            transition: "all 0.15s ease",
+            cursor: "pointer",
+            position: "relative",
+            border: isActive
+              ? `1px solid ${c.accent}30`
+              : "1px solid transparent",
+          }}
+          onMouseEnter={(e) => {
+            if (!isActive) {
+              e.currentTarget.style.background = c.bgHover;
+              e.currentTarget.style.color = c.text;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isActive) {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = c.textTer;
+            }
+          }}
+        >
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <Icon size={20} style={{ strokeWidth: isActive ? 2.5 : 2 }} />
+
+            {badge && unreadCount > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-6px",
+                  right: "-6px",
+                  background: "#ef4444",
+                  color: "#fff",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  minWidth: "18px",
+                  height: "18px",
+                  borderRadius: "9px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0 4px",
+                  border: `2px solid ${c.bgCard}`,
+                  fontFamily: "Inter, sans-serif",
+                }}
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </div>
+            )}
+          </div>
+
+          <span style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+            {label}
+          </span>
+
+          {isActive && (
             <div
               style={{
                 position: "absolute",
-                top: "-6px",
-                right: "-6px",
-                background: "#ef4444",
-                color: "#fff",
-                fontSize: "10px",
-                fontWeight: 700,
-                minWidth: "18px",
-                height: "18px",
-                borderRadius: "9px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0 4px",
-                border: `2px solid ${c.bgCard}`,
-                fontFamily: "Inter, sans-serif",
+                left: 0,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: "3px",
+                height: "60%",
+                background: c.accent,
+                borderRadius: "0 3px 3px 0",
               }}
-            >
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </div>
+            />
           )}
         </div>
-
-        <span style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
-          {label}
-        </span>
-
-        {/* Active indicator bar */}
-        {isActive && (
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: "3px",
-              height: "60%",
-              background: c.accent,
-              borderRadius: "0 3px 3px 0",
-            }}
-          />
-        )}
-      </div>
-    )}
-  </NavLink>
-);
+      )}
+    </NavLink>
+  );
+};
 
 /* ─── Avatar Component (MUST use useState — it's a component) ──── */
 const Avatar = ({ src, letter, size = 38, c }) => {

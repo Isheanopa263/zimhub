@@ -30,6 +30,7 @@ const ProfilePage = () => {
     loadMorePosts,
     updateProfileInState,
     removePost,
+    refreshProfile,
   } = useProfile(username);
 
   const handleProfileSuccess = (updatedProfile) => {
@@ -282,6 +283,20 @@ const ProfilePage = () => {
       )}
     </div>
   );
+  /* Listen for nav-tap-refresh */
+  useEffect(() => {
+    const handleRefresh = (e) => {
+      if (e.detail?.page === "/profile") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (typeof refreshProfile === "function") {
+          refreshProfile();
+        }
+      }
+    };
+
+    window.addEventListener("nav-tap-refresh", handleRefresh);
+    return () => window.removeEventListener("nav-tap-refresh", handleRefresh);
+  }, []);
 };
 
 export default ProfilePage;

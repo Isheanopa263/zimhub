@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
-import { ImagePlus, X, GripVertical, MoveLeft, MoveRight } from "lucide-react";
+import { ImagePlus, X, MoveLeft, MoveRight } from "lucide-react";
 import Button from "../ui/Button";
-import MarkdownEditor from "../ui/MarkdownEditor";
 import useTheme from "../../hooks/useTheme";
 import toast from "react-hot-toast";
 
@@ -10,33 +9,39 @@ const MAX_SIZE_MB = 5;
 
 const CreateImageForm = ({ onSubmit, loading }) => {
   const [caption, setCaption] = useState("");
-  const [files, setFiles] = useState([]); // [{ file, preview, id }, ...]
+  const [files, setFiles] = useState([]);
   const fileRef = useRef();
   const { c } = useTheme();
+  const [dragOver, setDragOver] = useState(false);
 
-  /* ── Handle file selection ── */
+  /* ── File Selection ── */
   const handleFileChange = (e) => {
     const newFiles = Array.from(e.target.files);
-    if (!newFiles.length) return;
-
-    addFiles(newFiles);
-    e.target.value = ""; // Allow selecting the same files again
+    if (newFiles.length) addFiles(newFiles);
+    e.target.value = "";
   };
 
   const addFiles = (newFiles) => {
-    // Check total count
     if (files.length + newFiles.length > MAX_IMAGES) {
       toast.error(`Maximum ${MAX_IMAGES} images per post`);
       return;
     }
 
-    // Validate each file
     const validFiles = [];
     for (const file of newFiles) {
+      // Check file type
+      const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+      if (!allowed.includes(file.type)) {
+        toast.error(`"${file.name}" is not a supported image format`);
+        continue;
+      }
+
+      // Check file size
       if (file.size > MAX_SIZE_MB * 1024 * 1024) {
         toast.error(`"${file.name}" is larger than ${MAX_SIZE_MB}MB`);
         continue;
       }
+
       validFiles.push({
         file,
         preview: URL.createObjectURL(file),
@@ -47,7 +52,7 @@ const CreateImageForm = ({ onSubmit, loading }) => {
     setFiles((prev) => [...prev, ...validFiles]);
   };
 
-  /* ── Remove a file ── */
+  /* ── Remove ── */
   const removeFile = (id) => {
     setFiles((prev) => {
       const target = prev.find((f) => f.id === id);
@@ -56,19 +61,24 @@ const CreateImageForm = ({ onSubmit, loading }) => {
     });
   };
 
-  /* ── Reorder files ── */
+  /* ── Reorder ── */
   const moveFile = (id, direction) => {
     setFiles((prev) => {
       const index = prev.findIndex((f) => f.id === id);
       if (index === -1) return prev;
-
       const newIndex = direction === "up" ? index - 1 : index + 1;
       if (newIndex < 0 || newIndex >= prev.length) return prev;
-
       const updated = [...prev];
       [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
       return updated;
     });
+  };
+
+  /* ── Clear All ── */
+  const clearAll = () => {
+    files.forEach((f) => URL.revokeObjectURL(f.preview));
+    setFiles([]);
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   /* ── Submit ── */
@@ -79,38 +89,37 @@ const CreateImageForm = ({ onSubmit, loading }) => {
     }
 
     const formData = new FormData();
-    files.forEach(({ file }) => formData.append("images", file)); // Note: 'images' plural
-    if (caption.trim()) formData.append("caption", caption.trim());
+
+    // Field name MUST match backend: uploadMultipleImages.array('images', 10)
+    files.forEach(({ file }) => {
+      formData.append("images", file);
+    });
+
+    if (caption.trim()) {
+      formData.append("caption", caption.trim());
+    }
+
     onSubmit(formData);
   };
 
-  /* ── Drag & drop ── */
-  const [dragOver, setDragOver] = useState(false);
-
+  /* ── Drag & Drop ── */
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-    const droppedFiles = Array.from(e.dataTransfer.files).filter((f) =>
+    const dropped = Array.from(e.dataTransfer.files).filter((f) =>
       f.type.startsWith("image/"),
     );
-    if (droppedFiles.length) addFiles(droppedFiles);
+    if (dropped.length) addFiles(dropped);
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = () => setDragOver(false);
-
-  /* ── Render ── */
   return (
     <div>
+      {/* Hidden file input */}
       <input
         ref={fileRef}
         type="file"
-        accept="image/*"
-        multiple /* ← Allow multiple selection */
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        multiple
         hidden
         onChange={handleFileChange}
       />
@@ -142,7 +151,7 @@ const CreateImageForm = ({ onSubmit, loading }) => {
             />
           ))}
 
-          {/* Add more button (if under max) */}
+          {/* Add more button */}
           {files.length < MAX_IMAGES && (
             <button
               type="button"
@@ -184,8 +193,11 @@ const CreateImageForm = ({ onSubmit, loading }) => {
         <div
           onClick={() => fileRef.current?.click()}
           onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
           style={{
             border: `2px dashed ${dragOver ? c.accent : c.borderStrong}`,
             borderRadius: "16px",
@@ -208,12 +220,21 @@ const CreateImageForm = ({ onSubmit, loading }) => {
               fontWeight: 600,
               color: c.textTer,
               margin: "0 0 4px",
+              fontFamily: "Inter, sans-serif",
             }}
           >
-            {dragOver ? "Drop images here" : "Click to upload images"}
+            {dragOver ? "Drop images here" : "Tap to upload images"}
           </p>
-          <p style={{ fontSize: "12px", color: c.textMuted, margin: 0 }}>
-            Up to {MAX_IMAGES} images · Max {MAX_SIZE_MB}MB each
+          <p
+            style={{
+              fontSize: "12px",
+              color: c.textMuted,
+              margin: 0,
+              fontFamily: "Inter, sans-serif",
+            }}
+          >
+            Up to {MAX_IMAGES} images · Max {MAX_SIZE_MB}MB each · JPEG, PNG,
+            GIF, WebP
           </p>
         </div>
       )}
@@ -243,10 +264,7 @@ const CreateImageForm = ({ onSubmit, loading }) => {
           </span>
           <button
             type="button"
-            onClick={() => {
-              files.forEach((f) => URL.revokeObjectURL(f.preview));
-              setFiles([]);
-            }}
+            onClick={clearAll}
             style={{
               background: "none",
               border: "none",
@@ -263,36 +281,48 @@ const CreateImageForm = ({ onSubmit, loading }) => {
       )}
 
       {/* Caption */}
-      <MarkdownEditor
+      <textarea
         value={caption}
-        onChange={setCaption}
-        placeholder="Add a caption (optional) "
+        onChange={(e) => setCaption(e.target.value)}
+        placeholder="Add a caption (optional)"
         maxLength={500}
-        rows={2}
-        showPreviewToggle
+        rows={3}
+        style={{
+          width: "100%",
+          padding: "12px",
+          borderRadius: "12px",
+          border: `2px solid ${c.borderStrong}`,
+          background: c.bgInput,
+          color: c.text,
+          resize: "none",
+          fontSize: "14px",
+          fontFamily: "Inter, sans-serif",
+          outline: "none",
+          marginBottom: "14px",
+        }}
+        onFocus={(e) => (e.target.style.borderColor = c.accent)}
+        onBlur={(e) => (e.target.style.borderColor = c.borderStrong)}
       />
 
       {/* Submit */}
-      <div style={{ marginTop: "14px" }}>
-        <Button
-          onClick={handleSubmit}
-          fullWidth
-          isLoading={loading}
-          disabled={files.length === 0}
-          size="lg"
-        >
-          {files.length > 1
-            ? `Post ${files.length} Images`
-            : files.length === 1
-              ? "Post Image"
-              : "Add Images First"}
-        </Button>
-      </div>
+      <Button
+        onClick={handleSubmit}
+        fullWidth
+        isLoading={loading}
+        disabled={files.length === 0}
+        size="lg"
+      >
+        {files.length > 1
+          ? `Post ${files.length} Images`
+          : files.length === 1
+            ? "Post Image"
+            : "Add Images First"}
+      </Button>
     </div>
   );
 };
 
-/* ─── Single Image Preview Card ─── */
+/* ─── Image Preview Card ─── */
 const ImagePreview = ({
   preview,
   index,
@@ -325,28 +355,7 @@ const ImagePreview = ({
       }}
     />
 
-    {/* Position badge */}
-    {total > 1 && (
-      <div
-        style={{
-          position: "absolute",
-          top: "6px",
-          left: "6px",
-          background: "rgba(0,0,0,0.7)",
-          color: "#fff",
-          padding: "2px 8px",
-          borderRadius: "12px",
-          fontSize: "10px",
-          fontWeight: 700,
-          fontFamily: "Inter, sans-serif",
-          backdropFilter: "blur(4px)",
-        }}
-      >
-        {index + 1} / {total}
-      </div>
-    )}
-
-    {/* Action buttons */}
+    {/* Actions */}
     <div
       style={{
         position: "absolute",
@@ -356,79 +365,48 @@ const ImagePreview = ({
         gap: "4px",
       }}
     >
-      {/* Move buttons (only if multiple) */}
       {total > 1 && (
         <>
           {index > 0 && (
-            <button
-              type="button"
-              onClick={onMoveUp}
-              title="Move left"
-              style={{
-                background: "rgba(0,0,0,0.7)",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
-                width: "24px",
-                height: "24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                backdropFilter: "blur(4px)",
-              }}
-            >
+            <SmallBtn onClick={onMoveUp} title="Move left">
               <MoveLeft size={11} />
-            </button>
+            </SmallBtn>
           )}
           {index < total - 1 && (
-            <button
-              type="button"
-              onClick={onMoveDown}
-              title="Move right"
-              style={{
-                background: "rgba(0,0,0,0.7)",
-                color: "#fff",
-                border: "none",
-                borderRadius: "50%",
-                width: "24px",
-                height: "24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                backdropFilter: "blur(4px)",
-              }}
-            >
+            <SmallBtn onClick={onMoveDown} title="Move right">
               <MoveRight size={11} />
-            </button>
+            </SmallBtn>
           )}
         </>
       )}
-
-      {/* Remove */}
-      <button
-        type="button"
-        onClick={onRemove}
-        title="Remove"
-        style={{
-          background: "rgba(239, 68, 68, 0.9)",
-          color: "#fff",
-          border: "none",
-          borderRadius: "50%",
-          width: "24px",
-          height: "24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          backdropFilter: "blur(4px)",
-        }}
-      >
+      <SmallBtn onClick={onRemove} title="Remove" danger>
         <X size={12} />
-      </button>
+      </SmallBtn>
     </div>
   </div>
+);
+
+const SmallBtn = ({ onClick, title, children, danger = false }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={title}
+    style={{
+      background: danger ? "rgba(239,68,68,0.9)" : "rgba(0,0,0,0.7)",
+      color: "#fff",
+      border: "none",
+      borderRadius: "50%",
+      width: "24px",
+      height: "24px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      backdropFilter: "blur(4px)",
+    }}
+  >
+    {children}
+  </button>
 );
 
 export default CreateImageForm;
