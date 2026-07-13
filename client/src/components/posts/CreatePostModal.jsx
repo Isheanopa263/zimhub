@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { X, Type, ImagePlus, Video, Link2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { X, Type, ImagePlus, Video, Link2, BarChart2 } from "lucide-react";
 
 import useUIStore from "../../store/uiStore";
 import useTheme from "../../hooks/useTheme";
@@ -10,12 +10,14 @@ import CreateTextForm from "./CreateTextForm";
 import CreateImageForm from "./CreateImageForm";
 import CreateVideoForm from "./CreateVideoForm";
 import CreateLinkForm from "./CreateLinkForm";
+import CreatePollForm from "./CreatePollForm";
 
 const POST_TYPES = [
   { key: "text", icon: Type, label: "Text", color: "#8b5cf6" },
   { key: "image", icon: ImagePlus, label: "Image", color: "#3B82F6" },
   { key: "video", icon: Video, label: "Video", color: "#ef4444" },
   { key: "link", icon: Link2, label: "Link", color: "#10b981" },
+  { key: "poll", icon: BarChart2, label: "Poll", color: "#f59e0b" },
 ];
 
 const CreatePostModal = ({ onPostCreated }) => {
@@ -42,6 +44,9 @@ const CreatePostModal = ({ onPostCreated }) => {
           break;
         case "link":
           response = await postsApi.createLinkPost(data);
+          break;
+        case "poll":
+          response = await postsApi.createPollPost(data);
           break;
       }
       toast.success("Post created! 🎉");
@@ -190,6 +195,9 @@ const CreatePostModal = ({ onPostCreated }) => {
           )}
           {activeType === "link" && (
             <CreateLinkForm onSubmit={handleSubmit} loading={loading} />
+          )}
+          {activeType === "poll" && (
+            <CreatePollForm onSubmit={handleSubmit} loading={loading} />
           )}
         </div>
       </div>

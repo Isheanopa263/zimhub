@@ -7,6 +7,7 @@ import {
   ImagePlus,
   Video,
   Link2,
+  BarChart2,
 } from "lucide-react";
 import useTheme from "../../hooks/useTheme";
 
@@ -16,6 +17,7 @@ const FILTER_OPTIONS = [
   { key: "image", label: "Photos", icon: ImagePlus, color: "#3B82F6" },
   { key: "video", label: "Videos", icon: Video, color: "#ef4444" },
   { key: "link", label: "Links", icon: Link2, color: "#10b981" },
+  { key: "poll", label: "Polls", icon: BarChart2, color: "#f59e0b" },
 ];
 
 const FilterDropdown = ({ value, onChange }) => {

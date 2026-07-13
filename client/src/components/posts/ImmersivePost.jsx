@@ -23,6 +23,7 @@ import { getImageUrl, getVideoUrl, getAvatarUrl } from "../../utils/media";
 import HeartBurst from "./HeartBurst";
 import CommentsDrawer from "../comments/CommentsDrawer";
 import MarkdownText from "../ui/MarkdownText";
+import PollContent from "./PollContent";
 import { BACKGROUND_STYLES } from "./TextPost";
 
 const timeAgo = (dateString) => {
@@ -39,7 +40,7 @@ const timeAgo = (dateString) => {
   });
 };
 
-const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
+const ImmersivePost = ({ post, isActive, onDelete }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { c } = useTheme();
@@ -56,7 +57,6 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
     toggleLike,
   } = useLike(post.isLiked || false, post.stats?.likes || 0);
 
-  const handleLike = () => toggleLike(post.id);
   const handleDoubleTap = () => {
     if (!isLiked && !likeLoading) toggleLike(post.id);
   };
@@ -66,7 +66,6 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
   const isOwner = user?.id === post.author?.id;
   const isAdmin = user?.role === "admin";
   const canDelete = isOwner || isAdmin;
-
   const avatarSrc = getAvatarUrl(post.author?.avatarUrl);
   const letter = post.author?.fullName?.charAt(0)?.toUpperCase() || "?";
 
@@ -84,58 +83,66 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
     }
   };
 
+  const captionText = post.caption || (post.type === "text" ? null : "");
+
   return (
     <div
       style={{
         height: "100%",
         width: "100%",
         position: "relative",
-        background: "#000",
         overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
       }}
     >
-      {/* ── Main Content Area (Double-tap zone) ── */}
+      {/* ── Full-Screen Content — fills entire area ── */}
       <div
         {...handlers}
         style={{
-          flex: 1,
-          position: "relative",
+          position: "absolute",
+          inset: 0,
           userSelect: "none",
           WebkitTapHighlightColor: "transparent",
         }}
       >
         <PostContent post={post} isActive={isActive} />
 
-        {/* Heart bursts on double-tap */}
+        {/* Heart bursts */}
         {bursts.map((burst) => (
           <HeartBurst key={burst.id} id={burst.id} x={burst.x} y={burst.y} />
         ))}
       </div>
 
-      {/* ── Bottom Info (Name + Username only) ── */}
+      {/* ── Bottom Gradient Overlay (for readability) ── */}
       <div
         style={{
           position: "absolute",
           bottom: 0,
           left: 0,
-          right: "80px",
-          padding: "80px 16px 24px",
+          right: 0,
+          height: "50%",
           background:
-            "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)",
+            "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 40%, transparent 100%)",
+          pointerEvents: "none",
+          zIndex: 5,
+        }}
+      />
+
+      {/* ── Bottom Info (Name + Username) ── */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "16px",
+          left: "16px",
+          right: "76px",
           zIndex: 10,
           pointerEvents: "none",
         }}
       >
         <div style={{ pointerEvents: "auto" }}>
-          {/* Author Name + Username */}
+          {/* Author */}
           <div
             onClick={() => navigate(`/profile/${post.author?.username}`)}
-            style={{
-              cursor: "pointer",
-              marginBottom: "6px",
-            }}
+            style={{ cursor: "pointer", marginBottom: "6px" }}
           >
             <p
               style={{
@@ -163,13 +170,11 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
             </p>
           </div>
 
-          {/* Caption (if exists) */}
-          {(post.caption || post.text?.content) && (
+          {/* Caption */}
+          {captionText && (
             <div
               onClick={() => setCaptionExpanded(!captionExpanded)}
-              style={{
-                cursor: "pointer",
-              }}
+              style={{ cursor: "pointer" }}
             >
               <p
                 style={{
@@ -186,33 +191,30 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
                   wordBreak: "break-word",
                 }}
               >
-                {post.caption || (post.type === "text" ? null : "")}
+                {captionText}
               </p>
-              {!captionExpanded &&
-                (post.caption?.length > 80 ||
-                  post.text?.content?.length > 80) && (
-                  <span
-                    style={{
-                      color: "rgba(255,255,255,0.5)",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      fontFamily: "Inter, sans-serif",
-                    }}
-                  >
-                    ... more
-                  </span>
-                )}
+              {!captionExpanded && captionText.length > 80 && (
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.5)",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                  }}
+                >
+                  ... more
+                </span>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Right-Side Action Bar (Avatar on top) ── */}
+      {/* ── Right Action Bar — overlays on top of content ── */}
       <div
         style={{
           position: "absolute",
           right: "12px",
-          bottom: "24px",
+          bottom: "16px",
           display: "flex",
           flexDirection: "column",
           gap: "18px",
@@ -220,7 +222,7 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
           zIndex: 10,
         }}
       >
-        {/* Author Avatar (on top of all action buttons) */}
+        {/* Avatar */}
         <button
           onClick={() => navigate(`/profile/${post.author?.username}`)}
           style={{
@@ -249,19 +251,11 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
                 height: "100%",
                 objectFit: "contain",
                 objectPosition: "center",
-                display: "block",
                 background: "linear-gradient(135deg, #3B82F6, #8b5cf6)",
               }}
             />
           ) : (
-            <span
-              style={{
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: "18px",
-                fontFamily: "Inter, sans-serif",
-              }}
-            >
+            <span style={{ color: "#fff", fontWeight: 800, fontSize: "18px" }}>
               {letter}
             </span>
           )}
@@ -278,7 +272,7 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
             />
           }
           label={likeCount}
-          onClick={handleLike}
+          onClick={() => toggleLike(post.id)}
           disabled={likeLoading}
         />
 
@@ -296,7 +290,7 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
           onClick={handleShare}
         />
 
-        {/* Menu (if owner/admin) */}
+        {/* Delete menu */}
         {canDelete && (
           <div style={{ position: "relative" }}>
             <ActionButton
@@ -343,8 +337,8 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
                       color: "#ef4444",
                       fontSize: "13px",
                       fontWeight: 600,
-                      fontFamily: "Inter, sans-serif",
                       borderRadius: "8px",
+                      fontFamily: "Inter, sans-serif",
                     }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =
@@ -374,7 +368,7 @@ const ImmersivePost = ({ post, isActive, onDelete, index, totalPosts }) => {
   );
 };
 
-/* ─── Action Button (right-side icons) ─── */
+/* ─── Action Button ─── */
 const ActionButton = ({ icon, label, onClick, disabled }) => (
   <button
     onClick={onClick}
@@ -419,12 +413,14 @@ const PostContent = ({ post, isActive }) => {
       return <VideoContent post={post} isActive={isActive} />;
     case "link":
       return <LinkContent post={post} />;
+    case "poll":
+      return <PollContent post={post} />;
     default:
       return null;
   }
 };
 
-/* ─── Text Post ─── */
+/* ─── Text ─── */
 const TextContent = ({ post }) => {
   const style =
     BACKGROUND_STYLES[post.text?.backgroundStyle] || BACKGROUND_STYLES.default;
@@ -438,11 +434,11 @@ const TextContent = ({ post }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "80px 40px 200px",
+        padding: "80px 60px 160px 40px",
         background: isDefault ? "#0F172A" : style.background,
       }}
     >
-      <div style={{ maxWidth: "600px", textAlign: "center" }}>
+      <div style={{ maxWidth: "500px", textAlign: "center" }}>
         <MarkdownText
           variant="centered"
           textColor={isDefault ? "#ffffff" : style.color || "#ffffff"}
@@ -454,7 +450,7 @@ const TextContent = ({ post }) => {
   );
 };
 
-/* ─── Image Post ─── */
+/* ─── Image ─── */
 const ImageContent = ({ post }) => {
   const [current, setCurrent] = useState(0);
   const images = post.images || (post.image ? [post.image] : []);
@@ -476,73 +472,29 @@ const ImageContent = ({ post }) => {
       <img
         src={getImageUrl(images[current].url)}
         alt="Post"
-        style={{
-          maxWidth: "100%",
-          maxHeight: "100%",
-          objectFit: "contain",
-        }}
+        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
       />
 
       {images.length > 1 && (
         <>
           {current > 0 && (
-            <button
+            <NavBtn
+              dir="left"
               onClick={(e) => {
                 e.stopPropagation();
                 setCurrent(current - 1);
               }}
-              style={{
-                position: "absolute",
-                left: "16px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "rgba(0,0,0,0.5)",
-                border: "none",
-                borderRadius: "50%",
-                width: "40px",
-                height: "40px",
-                color: "#fff",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backdropFilter: "blur(8px)",
-                zIndex: 5,
-              }}
-            >
-              <ChevronLeft size={20} />
-            </button>
+            />
           )}
-
           {current < images.length - 1 && (
-            <button
+            <NavBtn
+              dir="right"
               onClick={(e) => {
                 e.stopPropagation();
                 setCurrent(current + 1);
               }}
-              style={{
-                position: "absolute",
-                right: "16px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "rgba(0,0,0,0.5)",
-                border: "none",
-                borderRadius: "50%",
-                width: "40px",
-                height: "40px",
-                color: "#fff",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backdropFilter: "blur(8px)",
-                zIndex: 5,
-              }}
-            >
-              <ChevronRight size={20} />
-            </button>
+            />
           )}
-
           <div
             style={{
               position: "absolute",
@@ -577,7 +529,33 @@ const ImageContent = ({ post }) => {
   );
 };
 
-/* ─── Video Post ─── */
+const NavBtn = ({ dir, onClick }) => (
+  <button
+    onClick={onClick}
+    style={{
+      position: "absolute",
+      [dir === "left" ? "left" : "right"]: "16px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      background: "rgba(0,0,0,0.5)",
+      border: "none",
+      borderRadius: "50%",
+      width: "40px",
+      height: "40px",
+      color: "#fff",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backdropFilter: "blur(8px)",
+      zIndex: 5,
+    }}
+  >
+    {dir === "left" ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+  </button>
+);
+
+/* ─── Video ─── */
 const VideoContent = ({ post, isActive }) => {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -595,32 +573,10 @@ const VideoContent = ({ post, isActive }) => {
     }
   }, [isActive]);
 
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (
-        !isActive ||
-        e.target.tagName === "INPUT" ||
-        e.target.tagName === "TEXTAREA"
-      )
-        return;
-      if (e.key === " ") {
-        e.preventDefault();
-        togglePlay();
-      } else if (e.key === "m") {
-        toggleMute();
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [isActive]);
-
   const togglePlay = () => {
     if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play().catch(() => {});
-    } else {
-      videoRef.current.pause();
-    }
+    if (videoRef.current.paused) videoRef.current.play().catch(() => {});
+    else videoRef.current.pause();
   };
 
   const toggleMute = (e) => {
@@ -659,11 +615,7 @@ const VideoContent = ({ post, isActive }) => {
         muted={isMuted}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
-        style={{
-          maxWidth: "100%",
-          maxHeight: "100%",
-          objectFit: "contain",
-        }}
+        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
       />
 
       {!isPlaying && (
@@ -719,7 +671,7 @@ const VideoContent = ({ post, isActive }) => {
   );
 };
 
-/* ─── Link Post ─── */
+/* ─── Link ─── */
 const LinkContent = ({ post }) => {
   const domain = (() => {
     try {
@@ -739,12 +691,12 @@ const LinkContent = ({ post }) => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "80px 20px 200px",
+        padding: "80px 60px 200px 20px",
       }}
     >
       <div
         style={{
-          maxWidth: "450px",
+          maxWidth: "400px",
           width: "100%",
           background: "rgba(255,255,255,0.05)",
           border: "1px solid rgba(255,255,255,0.1)",
@@ -836,8 +788,7 @@ const LinkContent = ({ post }) => {
               fontFamily: "Inter, sans-serif",
             }}
           >
-            Visit Link
-            <ExternalLink size={14} />
+            Visit Link <ExternalLink size={14} />
           </a>
         </div>
       </div>

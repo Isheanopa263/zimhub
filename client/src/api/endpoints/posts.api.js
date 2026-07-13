@@ -44,6 +44,21 @@ export const postsApi = {
     const response = await api.post("/posts/link", data);
     return response.data;
   },
+  /**
+   * Create poll post
+   */
+  createPollPost: async (data) => {
+    const response = await api.post("/posts/poll", data);
+    return response.data;
+  },
+
+  /**
+   * Vote on a poll
+   */
+  votePoll: async (postId, optionIds) => {
+    const response = await api.post(`/posts/${postId}/vote`, { optionIds });
+    return response.data;
+  },
 
   /**
    * Create image post (multi-image carousel)

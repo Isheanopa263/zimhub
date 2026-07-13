@@ -86,4 +86,10 @@ router.post(
 router.get("/:id", postIdValidator, validate, postsController.getPost);
 router.delete("/:id", postIdValidator, validate, postsController.deletePost);
 
+// Poll post
+router.post("/poll", createPostLimiter, postsController.createPollPost);
+
+// Vote on poll (before /:id to avoid route conflict)
+router.post("/:id/vote", postsController.votePoll);
+
 module.exports = router;

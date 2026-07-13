@@ -60,6 +60,29 @@ const createLinkPost = async (req, res, next) => {
   }
 };
 
+const createPollPost = async (req, res, next) => {
+  try {
+    const post = await postsService.createPollPost(req.user.id, req.body);
+    return ApiResponse.created(res, "Poll created", post);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const votePoll = async (req, res, next) => {
+  try {
+    const { optionIds } = req.body;
+    const post = await postsService.votePoll(
+      req.params.id,
+      req.user.id,
+      optionIds,
+    );
+    return ApiResponse.success(res, "Vote recorded", post);
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * GET /api/v1/posts/feed
  */
@@ -153,6 +176,8 @@ module.exports = {
   createVideoPost,
   createTextPost,
   createLinkPost,
+  createPollPost,
+  votePoll,
   getFeed,
   getPost,
   getUserPosts,
