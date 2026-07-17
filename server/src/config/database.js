@@ -6,22 +6,27 @@ const pool = new Pool({
     process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: false }
       : false,
-
-  // Tuned for 500+ concurrent users
-  max: 50, // Max connections (was 20)
-  min: 5, // Keep min connections warm
+  max: 20,
+  min: 2,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000, // Increased from 2s
-
-  // Statement timeout — kill slow queries
-  statement_timeout: 30000, // 30 seconds
-
-  // Application name for monitoring
+  connectionTimeoutMillis: 10000,
   application_name: "zimhub-api",
+
+  // Force IPv4 to avoid Render's IPv6 issues
+  ...(process.env.NODE_ENV === "production" && {
+    host: undefined, // Let connectionString handle it
+  }),
 });
 
 pool.on("error", (err) => {
   console.error("❌ Database error:", err.message);
+});
+
+pool.on("connect", () => {
+  if (!pool._connected) {
+    console.log("✅ Database connected");
+    pool._connected = true;
+  }
 });
 
 const query = async (text, params) => {
