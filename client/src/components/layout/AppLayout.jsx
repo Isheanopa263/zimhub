@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import Header from "./Header";
 import RightSidebar from "./RightSidebar";
+import InstallPrompt from "../pwa/InstallPrompt";
 
 import useTheme from "../../hooks/useTheme";
 import useNotificationStore from "../../store/notificationStore";
@@ -80,6 +81,9 @@ const AppLayout = () => {
       {/* Hide right sidebar on feed for more immersion */}
       {showRightSidebar && !isFeed && <RightSidebar />}
       {isMobile && <BottomNav unreadNotifications={unreadCount} />}
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 };
