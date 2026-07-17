@@ -27,16 +27,27 @@ const initTransporter = () => {
       maxConnections: 5,
       maxMessages: 100,
     });
+    const dns = require("dns");
+    // Force IPv4 for SMTP — Render free tier doesn't support IPv6
+    dns.setDefaultResultOrder("ipv4first");
 
-    transporter.verify((error) => {
-      if (error) {
-        console.error("❌ SMTP failed:", error.message);
-        isConfigured = false;
-        setupConsoleTransporter();
-      } else {
-        console.log("✅ Email service ready");
-        isConfigured = true;
-      }
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      // Force IPv4
+      family: 4,
+      // Increase timeout for Render's network
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
     });
   } else {
     console.log("ℹ️  Email service: console mode (dev)");
