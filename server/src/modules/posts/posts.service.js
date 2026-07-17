@@ -1,6 +1,6 @@
 const { query, getClient } = require("../../config/database");
 const ApiError = require("../../utils/ApiError");
-const { getFileUrl, deleteFile } = require("../../utils/storage");
+const { getFileUrl, deleteFile, uploadFile } = require("../../utils/storage");
 const { getPaginationMeta } = require("../../utils/helpers");
 
 // ─── Shared SQL fragment — avoids repetition ──────────────────────────────────
@@ -128,10 +128,13 @@ const createImagePost = async (userId, caption, files) => {
 
     // Insert all images with display order
     for (let i = 0; i < files.length; i++) {
+      // Upload to R2 (or keep local)
+      const storedUrl = await uploadFile(files[i].filename, "images");
+
       await client.query(
         `INSERT INTO post_images (post_id, image_url, file_size, display_order)
-         VALUES ($1, $2, $3, $4)`,
-        [postId, files[i].filename, files[i].size, i],
+     VALUES ($1, $2, $3, $4)`,
+        [postId, storedUrl, files[i].size, i],
       );
     }
 
@@ -164,10 +167,12 @@ const createVideoPost = async (userId, caption, file) => {
 
     const postId = postResult.rows[0].id;
 
+    const storedUrl = await uploadFile(file.filename, "videos");
+
     await client.query(
       `INSERT INTO post_videos (post_id, video_url, file_size)
-       VALUES ($1, $2, $3)`,
-      [postId, file.filename, file.size],
+   VALUES ($1, $2, $3)`,
+      [postId, storedUrl, file.size],
     );
 
     await client.query("COMMIT");

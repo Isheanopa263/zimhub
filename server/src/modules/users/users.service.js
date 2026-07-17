@@ -1,6 +1,6 @@
 const { query, getClient } = require("../../config/database");
 const ApiError = require("../../utils/ApiError");
-const { getFileUrl, deleteFile } = require("../../utils/storage");
+const { getFileUrl, deleteFile, uploadFile } = require("../../utils/storage");
 const { remember, invalidate } = require("../../utils/cache");
 
 const getProfileByUsername = async (username, currentUserId = null) => {
@@ -113,7 +113,8 @@ const updateProfile = async (
       if (current.avatar_url) {
         deleteFile(current.avatar_url, "avatars");
       }
-      profileParams.push(avatarFile.filename);
+      const storedUrl = await uploadFile(avatarFile.filename, "avatars");
+      profileParams.push(storedUrl);
       profileUpdates.push(`avatar_url = $${profileParams.length}`);
     }
 

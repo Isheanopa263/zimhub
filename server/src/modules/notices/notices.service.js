@@ -1,6 +1,6 @@
 const { query, getClient } = require("../../config/database");
 const ApiError = require("../../utils/ApiError");
-const { getFileUrl, deleteFile } = require("../../utils/storage");
+const { getFileUrl, deleteFile, uploadFile } = require("../../utils/storage");
 const { getPaginationMeta } = require("../../utils/helpers");
 
 /**
@@ -11,6 +11,9 @@ const createNotice = async (userId, data, file = null) => {
     data;
 
   try {
+    const posterUrl = file?.filename
+      ? await uploadFile(file.filename, "notices")
+      : null;
     const result = await query(
       `INSERT INTO notices (
          user_id, title, description, poster_url,
@@ -22,7 +25,7 @@ const createNotice = async (userId, data, file = null) => {
         userId,
         title.trim(),
         description.trim(),
-        file?.filename || null,
+        posterUrl,
         phoneNumber || null,
         whatsappNumber || null,
         emailAddress || null,

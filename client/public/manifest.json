@@ -1,15 +1,16 @@
 {
   "name": "ZimHub",
   "short_name": "ZimHub",
-  "description": "Private social platform for Zimbabwean university students",
-  "start_url": "/",
+  "description": "Private social platform for Zimbabwean university students at Aditya Institutions",
+  "start_url": "/zimhub/",
+  "scope": "/zimhub/",
   "display": "standalone",
-  "background_color": "#F8FAFC",
+  "background_color": "#0F172A",
   "theme_color": "#0F172A",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/zimhub/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

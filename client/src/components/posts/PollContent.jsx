@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { BarChart2, Check, Clock, Users } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { BarChart2, Check, Clock, Users, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { postsApi } from "../../api/endpoints/posts.api";
 import useTheme from "../../hooks/useTheme";
+
+const POLL_REFRESH_INTERVAL = 10000; // 10 seconds — fast enough for live feel
 
 const timeLeft = (expiresAt) => {
   if (!expiresAt) return null;
@@ -19,6 +21,10 @@ const PollContent = ({ post, onVoted }) => {
   const [selected, setSelected] = useState([]);
   const [voting, setVoting] = useState(false);
   const [localPoll, setLocalPoll] = useState(post.poll);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const pollIntervalRef = useRef(null);
+  const isFetchingRef = useRef(false);
 
   if (!localPoll) return null;
 
@@ -36,6 +42,65 @@ const PollContent = ({ post, onVoted }) => {
   const showResults = hasVoted || isExpired;
   const remaining = timeLeft(expiresAt);
 
+  /* ─── Auto-refresh poll data every 10 seconds ─── */
+  useEffect(() => {
+    // Only poll if the poll is active (not expired)
+    const shouldPoll = !isExpired;
+
+    const fetchLatest = async () => {
+      if (isFetchingRef.current) return;
+      if (document.hidden) return; // Don't poll when tab is hidden
+
+      isFetchingRef.current = true;
+
+      try {
+        const response = await postsApi.getPost(post.id);
+        const updatedPoll = response?.data?.poll;
+
+        if (updatedPoll) {
+          // Only update if vote count actually changed
+          // This prevents unnecessary re-renders
+          if (updatedPoll.totalVotes !== localPoll.totalVotes) {
+            setLocalPoll(updatedPoll);
+          }
+          setLastUpdated(new Date());
+        }
+      } catch {
+        // Silent fail — poll refresh is non-critical
+      } finally {
+        isFetchingRef.current = false;
+      }
+    };
+
+    if (shouldPoll) {
+      // Start polling
+      pollIntervalRef.current = setInterval(fetchLatest, POLL_REFRESH_INTERVAL);
+
+      // Also refresh when tab becomes visible
+      const handleVisibility = () => {
+        if (!document.hidden) fetchLatest();
+      };
+      document.addEventListener("visibilitychange", handleVisibility);
+
+      return () => {
+        clearInterval(pollIntervalRef.current);
+        document.removeEventListener("visibilitychange", handleVisibility);
+      };
+    }
+
+    return () => {
+      clearInterval(pollIntervalRef.current);
+    };
+  }, [post.id, isExpired, localPoll.totalVotes]);
+
+  /* ─── Update local poll when parent post updates ─── */
+  useEffect(() => {
+    if (post.poll) {
+      setLocalPoll(post.poll);
+    }
+  }, [post.poll]);
+
+  /* ─── Vote handlers ─── */
   const toggleOption = (optionId) => {
     if (showResults || voting) return;
 
@@ -57,12 +122,37 @@ const PollContent = ({ post, onVoted }) => {
     }
 
     setVoting(true);
+
+    // Optimistic update — show results immediately
+    const optimisticOptions = localPoll.options.map((opt) => ({
+      ...opt,
+      voteCount: selected.includes(opt.id) ? opt.voteCount + 1 : opt.voteCount,
+    }));
+
+    const optimisticPoll = {
+      ...localPoll,
+      totalVotes: localPoll.totalVotes + 1,
+      hasVoted: true,
+      userVotes: selected,
+      options: optimisticOptions,
+    };
+
+    setLocalPoll(optimisticPoll);
+
     try {
       const response = await postsApi.votePoll(post.id, selected);
-      setLocalPoll(response.data?.poll);
+      const serverPoll = response?.data?.poll;
+
+      if (serverPoll) {
+        setLocalPoll(serverPoll);
+      }
+
       toast.success("Vote recorded! 🗳️");
-      onVoted?.(response.data);
+      onVoted?.(response?.data);
     } catch (err) {
+      // Revert optimistic update
+      setLocalPoll(post.poll);
+      setSelected([]);
       toast.error(err.response?.data?.message || "Failed to vote");
     } finally {
       setVoting(false);
@@ -79,15 +169,10 @@ const PollContent = ({ post, onVoted }) => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "80px 20px 200px",
+        padding: "80px 60px 160px 20px",
       }}
     >
-      <div
-        style={{
-          maxWidth: "450px",
-          width: "100%",
-        }}
-      >
+      <div style={{ maxWidth: "450px", width: "100%" }}>
         {/* Question */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <BarChart2
@@ -156,11 +241,11 @@ const PollContent = ({ post, onVoted }) => {
                   cursor: showResults ? "default" : "pointer",
                   textAlign: "left",
                   overflow: "hidden",
-                  transition: "all 0.2s ease",
+                  transition: "all 0.3s ease",
                   fontFamily: "Inter, sans-serif",
                 }}
               >
-                {/* Progress bar background */}
+                {/* Animated progress bar */}
                 {showResults && (
                   <div
                     style={{
@@ -196,7 +281,7 @@ const PollContent = ({ post, onVoted }) => {
                       minWidth: 0,
                     }}
                   >
-                    {/* Check/Select indicator */}
+                    {/* Check/radio indicator */}
                     <div
                       style={{
                         width: "22px",
@@ -234,20 +319,39 @@ const PollContent = ({ post, onVoted }) => {
                     </span>
                   </div>
 
-                  {/* Vote count / percentage */}
+                  {/* Vote count + percentage */}
                   {showResults && (
-                    <span
+                    <div
                       style={{
-                        color: "rgba(255,255,255,0.8)",
-                        fontSize: "14px",
-                        fontWeight: 800,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
                         flexShrink: 0,
                         marginLeft: "10px",
-                        fontFamily: "Inter, sans-serif",
                       }}
                     >
-                      {percentage}%
-                    </span>
+                      <span
+                        style={{
+                          color: "rgba(255,255,255,0.5)",
+                          fontSize: "12px",
+                          fontFamily: "Inter, sans-serif",
+                        }}
+                      >
+                        {option.voteCount}
+                      </span>
+                      <span
+                        style={{
+                          color: "rgba(255,255,255,0.8)",
+                          fontSize: "14px",
+                          fontWeight: 800,
+                          fontFamily: "Inter, sans-serif",
+                          minWidth: "36px",
+                          textAlign: "right",
+                        }}
+                      >
+                        {percentage}%
+                      </span>
+                    </div>
                   )}
                 </div>
               </button>
@@ -255,7 +359,7 @@ const PollContent = ({ post, onVoted }) => {
           })}
         </div>
 
-        {/* Vote button (if not voted and not expired) */}
+        {/* Vote button */}
         {!showResults && (
           <button
             onClick={handleVote}
@@ -296,11 +400,13 @@ const PollContent = ({ post, onVoted }) => {
             alignItems: "center",
             justifyContent: "center",
             gap: "16px",
+            flexWrap: "wrap",
             color: "rgba(255,255,255,0.5)",
             fontSize: "12px",
             fontFamily: "Inter, sans-serif",
           }}
         >
+          {/* Total votes with live pulse */}
           <span
             style={{
               display: "flex",
@@ -309,9 +415,16 @@ const PollContent = ({ post, onVoted }) => {
             }}
           >
             <Users size={13} />
-            {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
+            <span
+              style={{
+                transition: "all 0.3s ease",
+              }}
+            >
+              {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
+            </span>
           </span>
 
+          {/* Time remaining */}
           {remaining && (
             <span
               style={{
@@ -328,9 +441,41 @@ const PollContent = ({ post, onVoted }) => {
             </span>
           )}
 
+          {/* Multiple choice indicator */}
           {allowMultiple && <span>Multiple choice</span>}
+
+          {/* Live indicator (when poll is active and results are showing) */}
+          {showResults && !isExpired && (
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                color: "#4ade80",
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  background: "#4ade80",
+                  animation: "livePulse 2s infinite",
+                }}
+              />
+              Live
+            </span>
+          )}
         </div>
       </div>
+
+      <style>{`
+        @keyframes livePulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%      { opacity: 0.4; transform: scale(1.3); }
+        }
+      `}</style>
     </div>
   );
 };

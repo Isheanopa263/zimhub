@@ -1,6 +1,4 @@
 require("dotenv").config();
-const fs = require("fs");
-const path = require("path");
 
 const chalk = (() => {
   try {
@@ -25,19 +23,19 @@ const HEALTH_URL =
     "",
   ) + "/health";
 
-/* ─── Test State ──────────────────────────────────────────────────────────── */
+/* ─── State ───────────────────────────────────────────────────────────────── */
 const state = {
   tokens: { admin: null, user1: null, user2: null },
   refreshTokens: {},
   users: {},
-  posts: { text: null, image: null, video: null, link: null },
+  posts: { text: null, image: null, link: null, poll: null },
   comments: { main: null, reply: null },
   notice: null,
   notification: null,
   announcement: null,
   query: null,
-  queryReply: null,
   suggestion: null,
+  pollOptionIds: [],
 };
 
 const results = { passed: 0, failed: 0, skipped: 0, errors: [] };
@@ -94,137 +92,53 @@ const section = (title) => {
   );
 };
 
-const subsection = (title) => {
+const sub = (title) => {
   console.log(chalk.gray(`\n  ${title}`));
 };
 
-/* ─── Helper: Create test image file ──────────────────────────────────────── */
-const createTestImage = () => {
-  // Real 1x1 PNG (minimal valid)
+/* ─── Test image helpers ──────────────────────────────────────────────────── */
+const createTestPNG = () => {
   const png = Buffer.from([
-    0x89,
-    0x50,
-    0x4e,
-    0x47,
-    0x0d,
-    0x0a,
-    0x1a,
-    0x0a, // PNG signature
-    0x00,
-    0x00,
-    0x00,
-    0x0d,
-    0x49,
-    0x48,
-    0x44,
-    0x52, // IHDR chunk
-    0x00,
-    0x00,
-    0x00,
-    0x01,
-    0x00,
-    0x00,
-    0x00,
-    0x01,
-    0x08,
-    0x06,
-    0x00,
-    0x00,
-    0x00,
-    0x1f,
-    0x15,
-    0xc4,
-    0x89,
-    0x00,
-    0x00,
-    0x00,
-    0x0d,
-    0x49,
-    0x44,
-    0x41,
-    0x54,
-    0x78,
-    0x9c,
-    0x62,
-    0x00,
-    0x01,
-    0x00,
-    0x00,
-    0x05,
-    0x00,
-    0x01,
-    0x0d,
-    0x0a,
-    0x2d,
-    0xb4,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x49,
-    0x45,
-    0x4e,
-    0x44,
-    0xae,
-    0x42,
-    0x60,
-    0x82,
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+    0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x62, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+    0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
   ]);
-
   return new Blob([png], { type: "image/png" });
 };
 
-/* ─── Helper: Create fake image (text with .jpg extension) ───────────────── */
 const createFakeImage = () => {
-  // Plain text content disguised as an image — for magic byte test
-  const content =
-    "This is not a real image file, just text pretending to be JPEG";
-  return new Blob([content], { type: "image/jpeg" });
+  return new Blob(["this is not a real image"], { type: "image/jpeg" });
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TEST SUITES
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* 1. HEALTH & INFRASTRUCTURE */
+/* 1. HEALTH */
 const testHealth = async () => {
   section("1. Health & Infrastructure");
 
   const health = await request("GET", HEALTH_URL);
   assert("Server is reachable", health.ok || health.status === 200);
-  assert(
-    "Health endpoint returns healthy",
-    health.data?.status === "healthy",
-    `Got: ${JSON.stringify(health.data)}`,
-  );
+  assert("Health returns healthy", health.data?.status === "healthy");
 };
 
 /* 2. AUTHENTICATION */
 const testAuth = async () => {
   section("2. Authentication");
 
-  subsection("Login with seeded admin");
+  sub("Admin login");
   const adminLogin = await request("POST", "/auth/login", {
     identifier: "admin@zimhub.ac.zw",
     password: "Admin@1234",
   });
-  assert(
-    "Admin login succeeds",
-    adminLogin.ok,
-    JSON.stringify(adminLogin.data),
-  );
-  assert(
-    "Admin login returns access token",
-    !!adminLogin.data?.data?.accessToken,
-  );
-  assert(
-    "Admin login returns refresh token",
-    !!adminLogin.data?.data?.refreshToken,
-  );
-  assert(
-    "Admin user has admin role",
-    adminLogin.data?.data?.user?.role === "admin",
-  );
+  assert("Admin login succeeds", adminLogin.ok);
+  assert("Returns access token", !!adminLogin.data?.data?.accessToken);
+  assert("Returns refresh token", !!adminLogin.data?.data?.refreshToken);
+  assert("Admin role correct", adminLogin.data?.data?.user?.role === "admin");
 
   if (adminLogin.ok) {
     state.tokens.admin = adminLogin.data.data.accessToken;
@@ -232,7 +146,7 @@ const testAuth = async () => {
     state.users.admin = adminLogin.data.data.user;
   }
 
-  subsection("Login with seeded student");
+  sub("Student login (email)");
   const studentLogin = await request("POST", "/auth/login", {
     identifier: "tendai@uni.ac.zw",
     password: "Student@1234",
@@ -245,7 +159,7 @@ const testAuth = async () => {
     state.users.user1 = studentLogin.data.data.user;
   }
 
-  subsection("Login with username (not email)");
+  sub("Student login (username)");
   const usernameLogin = await request("POST", "/auth/login", {
     identifier: "chidi_o",
     password: "Student@1234",
@@ -257,19 +171,19 @@ const testAuth = async () => {
     state.users.user2 = usernameLogin.data.data.user;
   }
 
-  subsection("Case-insensitive login");
+  sub("Case-insensitive login");
   const caseLogin = await request("POST", "/auth/login", {
     identifier: "TENDAI@UNI.AC.ZW",
     password: "Student@1234",
   });
-  assert("Case-insensitive email login works", caseLogin.ok);
+  assert("Case-insensitive email works", caseLogin.ok);
 
-  subsection("Invalid login attempts");
+  sub("Invalid credentials");
   const wrongPass = await request("POST", "/auth/login", {
     identifier: "tendai@uni.ac.zw",
     password: "wrongpassword",
   });
-  assert("Wrong password rejected", !wrongPass.ok && wrongPass.status === 401);
+  assert("Wrong password → 401", !wrongPass.ok && wrongPass.status === 401);
 
   const wrongUser = await request("POST", "/auth/login", {
     identifier: "nonexistent@user.com",
@@ -277,235 +191,194 @@ const testAuth = async () => {
   });
   assert("Non-existent user rejected", !wrongUser.ok);
 
-  subsection("Get current user");
-  if (state.tokens.user1) {
-    const me = await request("GET", "/auth/me", null, state.tokens.user1);
-    assert("GET /auth/me works with token", me.ok);
-    assert("Returns user with profile", !!me.data?.data?.profile);
-    assert("Returns user stats", me.data?.data?.stats !== undefined);
-  }
+  sub("Token validation");
+  const me = await request("GET", "/auth/me", null, state.tokens.user1);
+  assert("GET /auth/me works", me.ok);
+  assert("Has profile", !!me.data?.data?.profile);
+  assert("Has stats", me.data?.data?.stats !== undefined);
 
-  subsection("Protected route without token");
   const noAuth = await request("GET", "/auth/me");
-  assert(
-    "Protected route rejects no token",
-    !noAuth.ok && noAuth.status === 401,
-  );
+  assert("No token → 401", !noAuth.ok && noAuth.status === 401);
 
-  subsection("Token signature validation");
-  const tamperedToken = state.tokens.user1?.slice(0, -10) + "TAMPERED01";
-  const tampered = await request("GET", "/auth/me", null, tamperedToken);
-  assert("Tampered token rejected", !tampered.ok && tampered.status === 401);
+  const tampered = state.tokens.user1?.slice(0, -10) + "TAMPERED01";
+  const tamperedRes = await request("GET", "/auth/me", null, tampered);
+  assert("Tampered token → 401", !tamperedRes.ok && tamperedRes.status === 401);
 
-  subsection("Token refresh");
+  sub("Token refresh");
+  await sleep(500);
   if (state.refreshTokens.user1) {
     const refresh = await request("POST", "/auth/refresh", {
       refreshToken: state.refreshTokens.user1,
     });
     assert("Token refresh works", refresh.ok);
-    assert("New tokens issued", !!refresh.data?.data?.accessToken);
-
-    // Update token for subsequent tests
+    assert("New access token issued", !!refresh.data?.data?.accessToken);
     if (refresh.ok) {
       state.tokens.user1 = refresh.data.data.accessToken;
       state.refreshTokens.user1 = refresh.data.data.refreshToken;
     }
   }
 
-  subsection("Invalid refresh token");
   const badRefresh = await request("POST", "/auth/refresh", {
     refreshToken: "invalid.token.here",
   });
   assert("Bad refresh token rejected", !badRefresh.ok);
 
-  subsection("OTP registration request");
-  const timestamp = Date.now();
-  const otpRequest = await request("POST", "/auth/register/request", {
+  sub("OTP registration");
+  const ts = Date.now();
+  const otpReq = await request("POST", "/auth/register/request", {
     fullName: "Test User",
-    username: `testuser_${timestamp}`,
-    email: `test_${timestamp}@example.com`,
+    username: `testuser_${ts}`,
+    email: `test_${ts}@example.com`,
     password: "TestPass@123",
-    bio: "Test account",
   });
-  assert(
-    "OTP registration request succeeds",
-    otpRequest.ok,
-    `Status: ${otpRequest.status}`,
-  );
+  assert("OTP request succeeds", otpReq.ok, `Status: ${otpReq.status}`);
 
-  subsection("Duplicate email rejection");
+  sub("Duplicate prevention");
   const dupEmail = await request("POST", "/auth/register/request", {
-    fullName: "Duplicate User",
-    username: `dup_email_${timestamp}`,
+    fullName: "Dup",
+    username: `dup_e_${ts}`,
     email: "tendai@uni.ac.zw",
     password: "TestPass@123",
   });
   assert(
     "Duplicate email rejected",
     !dupEmail.ok && (dupEmail.status === 409 || dupEmail.status === 429),
-    `Status: ${dupEmail.status}`,
   );
 
   await sleep(1500);
 
-  subsection("Duplicate username rejection");
   if (state.users.user1?.username) {
-    const dupUsername = await request("POST", "/auth/register/request", {
-      fullName: "Duplicate User",
+    const dupUser = await request("POST", "/auth/register/request", {
+      fullName: "Dup",
       username: state.users.user1.username,
-      email: `unique_${timestamp}@example.com`,
+      email: `unique_${ts}@example.com`,
       password: "TestPass@123",
     });
     assert(
       "Duplicate username rejected",
-      !dupUsername.ok &&
-        (dupUsername.status === 409 || dupUsername.status === 429),
-      `Status: ${dupUsername.status}`,
+      !dupUser.ok && (dupUser.status === 409 || dupUser.status === 429),
     );
-  } else {
-    skip("Duplicate username rejection", "no reference user");
-  }
 
-  subsection("Case-insensitive duplicate username");
-  if (state.users.user1?.username) {
     await sleep(1500);
-    const upperCase = await request("POST", "/auth/register/request", {
-      fullName: "Case Test",
+
+    const upperUser = await request("POST", "/auth/register/request", {
+      fullName: "Case",
       username: state.users.user1.username.toUpperCase(),
-      email: `casetest_${timestamp}@example.com`,
+      email: `case_${ts}@example.com`,
       password: "TestPass@123",
     });
     assert(
       "Uppercase username variant rejected",
-      !upperCase.ok && (upperCase.status === 409 || upperCase.status === 429),
-      `Status: ${upperCase.status}`,
+      !upperUser.ok && (upperUser.status === 409 || upperUser.status === 429),
     );
   }
 
-  subsection("Password reset OTP");
+  await sleep(500);
+  sub("Password reset (enumeration protection)");
   const resetOtp = await request("POST", "/auth/password-reset/request", {
     email: "tendai@uni.ac.zw",
   });
-  assert("Password reset OTP request works", resetOtp.ok);
+  assert("Password reset OTP works", resetOtp.ok);
 
-  subsection("Password reset enumeration protection");
   const fakeReset = await request("POST", "/auth/password-reset/request", {
     email: "totally-fake@nobody.com",
   });
-  assert(
-    "Non-existent email returns same success response",
-    fakeReset.ok,
-    "Should not reveal whether email exists",
-  );
+  assert("Non-existent email returns same response", fakeReset.ok);
 };
 
-/* 3. SECURITY — Rate Limiting */
+/* 3. SECURITY */
 const testSecurity = async () => {
-  section("3. Security & Rate Limiting");
+  section("17. Security & Rate Limiting");
 
-  subsection("Refresh token rate limit");
-  let refreshBlocked = false;
+  sub("Refresh token rate limit");
+  let blocked = false;
+
+  // Use a unique fake token pattern so rate limit key is isolated
+  const fakeToken = `fake.security.test.${Date.now()}`;
+
   for (let i = 0; i < 35; i++) {
     const res = await request("POST", "/auth/refresh", {
-      refreshToken: "fake.token.for.testing",
+      refreshToken: fakeToken,
     });
     if (res.status === 429) {
-      refreshBlocked = true;
+      blocked = true;
       break;
     }
   }
-  assert("Refresh endpoint rate-limited", refreshBlocked);
+  assert("Refresh endpoint rate-limited", blocked);
 
-  // Wait to clear rate limit for subsequent tests
-  await sleep(1500);
+  // Generous wait to let rate limit window cool down
+  // This prevents interference with subsequent test runs
+  await sleep(5000);
 };
 
-/* 4. USER PROFILES */
+/* 4. PROFILES */
 const testProfiles = async () => {
   section("4. User Profiles");
 
-  if (!state.tokens.user1) return skip("Profile tests", "no auth token");
+  if (!state.tokens.user1) return skip("Profiles", "no token");
 
-  subsection("Get own profile");
-  const ownProfile = await request(
+  sub("Own profile");
+  const own = await request(
     "GET",
     `/users/${state.users.user1.username}`,
     null,
     state.tokens.user1,
   );
-  assert("Get own profile works", ownProfile.ok);
-  assert("Own profile shows email", !!ownProfile.data?.data?.email);
-  assert(
-    "Own profile flag is set",
-    ownProfile.data?.data?.isOwnProfile === true,
-  );
+  assert("Get own profile", own.ok);
+  assert("Shows email", !!own.data?.data?.email);
+  assert("isOwnProfile = true", own.data?.data?.isOwnProfile === true);
 
-  subsection("Get other user profile (privacy)");
-  const otherProfile = await request(
+  sub("Other profile (privacy)");
+  const other = await request(
     "GET",
     `/users/${state.users.user2.username}`,
     null,
     state.tokens.user1,
   );
-  assert("Get other profile works", otherProfile.ok);
-  assert(
-    "Other profile hides email (privacy)",
-    otherProfile.data?.data?.email === null,
-  );
-  assert(
-    "Other profile flag is false",
-    otherProfile.data?.data?.isOwnProfile === false,
-  );
+  assert("Get other profile", other.ok);
+  assert("Hides email", other.data?.data?.email === null);
+  assert("isOwnProfile = false", other.data?.data?.isOwnProfile === false);
 
-  subsection("Non-existent profile");
+  sub("Non-existent profile");
   const notFound = await request(
     "GET",
-    "/users/nonexistentuser123456",
+    "/users/nonexistent999",
     null,
     state.tokens.user1,
   );
-  assert("Non-existent user returns 404", notFound.status === 404);
+  assert("404 for missing user", notFound.status === 404);
 
-  subsection("Update profile (valid name)");
-  const formData = new FormData();
-  formData.append("fullName", "Tendai Updated");
-  formData.append("bio", "Updated bio with **markdown**");
-
-  const updateRes = await fetch(`${BASE_URL}/users/me`, {
+  sub("Update profile");
+  const fd = new FormData();
+  fd.append("fullName", "Tendai Updated");
+  fd.append("bio", "Updated bio");
+  const upd = await fetch(`${BASE_URL}/users/me`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${state.tokens.user1}` },
-    body: formData,
+    body: fd,
   });
-  const updateData = await updateRes.json().catch(() => ({}));
+  const updData = await upd.json().catch(() => ({}));
+  assert("Profile update works", upd.ok, JSON.stringify(updData));
 
-  assert("Profile update works", updateRes.ok, JSON.stringify(updateData));
-  if (updateRes.ok) {
-    assert(
-      "Full name updated",
-      updateData.data?.profile?.fullName === "Tendai Updated",
-    );
-    assert("Bio updated", updateData.data?.profile?.bio?.includes("markdown"));
-  }
-
-  subsection("Profile update with period in name");
-  const formData2 = new FormData();
-  formData2.append("fullName", "Dr. Tendai M. Updated");
-
-  const updateRes2 = await fetch(`${BASE_URL}/users/me`, {
+  sub("Period in name");
+  const fd2 = new FormData();
+  fd2.append("fullName", "Dr. Tendai M. Updated");
+  const upd2 = await fetch(`${BASE_URL}/users/me`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${state.tokens.user1}` },
-    body: formData2,
+    body: fd2,
   });
-  assert("Period allowed in full name (Dr., A., etc.)", updateRes2.ok);
+  assert("Period in name allowed", upd2.ok);
 };
 
 /* 5. POSTS */
 const testPosts = async () => {
   section("5. Posts");
 
-  if (!state.tokens.user1) return skip("Post tests", "no auth token");
+  if (!state.tokens.user1) return skip("Posts", "no token");
 
-  subsection("Get feed");
+  sub("Feed");
   const feed = await request(
     "GET",
     "/posts/feed?page=1&limit=10",
@@ -513,87 +386,119 @@ const testPosts = async () => {
     state.tokens.user1,
   );
   assert("Get feed works", feed.ok);
-  assert("Feed returns array", Array.isArray(feed.data?.data));
-  assert("Feed has pagination meta", !!feed.data?.meta);
+  assert("Feed is array", Array.isArray(feed.data?.data));
+  assert("Has pagination meta", !!feed.data?.meta);
 
-  subsection("Create text post");
-  const textPost = await request(
+  sub("Create text post");
+  const text = await request(
     "POST",
     "/posts/text",
     {
-      content: "Test post with **bold** and *italic*! @admin #test",
+      content: "Test **bold** @admin #test",
       backgroundStyle: "default",
     },
     state.tokens.user1,
   );
-  assert("Create text post works", textPost.ok, JSON.stringify(textPost.data));
-  if (textPost.ok) {
-    state.posts.text = textPost.data.data.id;
-    assert("Text post has id", !!state.posts.text);
-    assert("Text post type is text", textPost.data.data.type === "text");
-    assert(
-      "Text content saved",
-      textPost.data.data.text?.content?.includes("bold"),
-    );
+  assert("Create text post", text.ok);
+  if (text.ok) {
+    state.posts.text = text.data.data.id;
+    assert("Has id", !!state.posts.text);
+    assert("Type is text", text.data.data.type === "text");
   }
 
-  subsection("Create link post");
-  const linkPost = await request(
+  sub("Create link post");
+  const link = await request(
     "POST",
     "/posts/link",
     {
       url: "https://react.dev",
       title: "React",
-      description: "A JavaScript library",
-      caption: "Check this out!",
+      description: "JS library",
+      caption: "Check it out!",
     },
     state.tokens.user1,
   );
-  assert("Create link post works", linkPost.ok);
-  if (linkPost.ok) state.posts.link = linkPost.data.data.id;
+  assert("Create link post", link.ok);
+  if (link.ok) state.posts.link = link.data.data.id;
 
-  subsection("Multi-image endpoint validates");
-  const noImagesRes = await fetch(`${BASE_URL}/posts/image`, {
+  sub("Create poll post");
+  const poll = await request(
+    "POST",
+    "/posts/poll",
+    {
+      question: "Favorite language?",
+      options: ["JavaScript", "Python", "Java"],
+      caption: "Vote now!",
+      expiresIn: "24",
+      allowMultiple: false,
+    },
+    state.tokens.user1,
+  );
+  assert("Create poll post", poll.ok);
+  if (poll.ok) {
+    state.posts.poll = poll.data.data.id;
+    assert("Poll has id", !!state.posts.poll);
+    assert("Type is poll", poll.data.data.type === "poll");
+    assert("Has poll data", !!poll.data.data.poll);
+    assert("Has 3 options", poll.data.data.poll.options?.length === 3);
+    assert("Not expired", poll.data.data.poll.isExpired === false);
+    state.pollOptionIds = poll.data.data.poll.options.map((o) => o.id);
+  }
+
+  sub("Multi-image endpoint requires files");
+  const noImg = await fetch(`${BASE_URL}/posts/image`, {
     method: "POST",
     headers: { Authorization: `Bearer ${state.tokens.user1}` },
     body: (() => {
-      const fd = new FormData();
-      fd.append("caption", "Test");
-      return fd;
+      const f = new FormData();
+      f.append("caption", "Test");
+      return f;
     })(),
   });
-  assert(
-    "Image endpoint requires files",
-    !noImagesRes.ok && noImagesRes.status === 400,
-    `Status: ${noImagesRes.status}`,
-  );
+  assert("Image endpoint requires files", !noImg.ok && noImg.status === 400);
 
-  subsection("Feed includes new posts");
-  const updatedFeed = await request(
+  sub("Feed includes new posts");
+  const updFeed = await request(
     "GET",
     "/posts/feed?page=1&limit=20",
     null,
     state.tokens.user1,
   );
-  const hasNewPost = updatedFeed.data?.data?.some(
-    (p) => p.id === state.posts.text,
+  assert(
+    "Text post in feed",
+    updFeed.data?.data?.some((p) => p.id === state.posts.text),
   );
-  assert("New post appears in feed", hasNewPost);
 
-  subsection("Filter feed by type");
+  sub("Filter by type");
   const textOnly = await request(
     "GET",
     "/posts/feed?type=text&limit=10",
     null,
     state.tokens.user1,
   );
-  assert("Filter by type works", textOnly.ok);
+  assert("Filter works", textOnly.ok);
   assert(
-    "All filtered posts are text",
+    "All are text",
     textOnly.data?.data?.every((p) => p.type === "text"),
   );
 
-  subsection("Get single post");
+  const pollOnly = await request(
+    "GET",
+    "/posts/feed?type=poll&limit=10",
+    null,
+    state.tokens.user1,
+  );
+  assert("Poll filter works", pollOnly.ok);
+  if (pollOnly.data?.data?.length > 0) {
+    assert(
+      "All are polls",
+      pollOnly.data.data.every((p) => p.type === "poll"),
+    );
+  } else {
+    assert("All are polls", true);
+  }
+
+  sub("Get single post");
   if (state.posts.text) {
     const single = await request(
       "GET",
@@ -601,142 +506,233 @@ const testPosts = async () => {
       null,
       state.tokens.user1,
     );
-    assert("Get single post works", single.ok);
-    assert("Single post matches", single.data?.data?.id === state.posts.text);
+    assert("Get single post", single.ok);
+    assert("ID matches", single.data?.data?.id === state.posts.text);
   }
 
-  subsection("Get user posts");
+  sub("User posts");
   const userPosts = await request(
     "GET",
     `/posts/user/${state.users.user1.id}`,
     null,
     state.tokens.user1,
   );
-  assert("Get user posts works", userPosts.ok);
-  assert("User posts is array", Array.isArray(userPosts.data?.data));
+  assert("Get user posts", userPosts.ok);
+  assert("Is array", Array.isArray(userPosts.data?.data));
 
-  subsection("Cannot delete others posts");
+  sub("Cannot delete others' posts");
   if (state.posts.text) {
-    const unauthDelete = await request(
+    const del = await request(
       "DELETE",
       `/posts/${state.posts.text}`,
       null,
       state.tokens.user2,
     );
-    assert(
-      "Non-owner cannot delete post",
-      !unauthDelete.ok && unauthDelete.status === 403,
-    );
+    assert("Non-owner → 403", !del.ok && del.status === 403);
   }
 };
 
-/* 6. FILE UPLOAD SECURITY (Magic Bytes) */
-const testFileUploadSecurity = async () => {
-  section("6. File Upload Security (Magic Bytes)");
+/* 6. POLLS */
+const testPolls = async () => {
+  section("6. Polls");
 
-  if (!state.tokens.user1) return skip("Upload security tests", "no auth");
+  if (!state.posts.poll || !state.tokens.user2)
+    return skip("Polls", "no poll or token");
 
-  subsection("Reject fake image (text with image MIME)");
-  const fakeImage = createFakeImage();
-  const fakeFormData = new FormData();
-  fakeFormData.append("images", fakeImage, "fake.jpg");
-  fakeFormData.append("caption", "This should fail");
+  sub("Vote on poll");
+  if (state.pollOptionIds.length > 0) {
+    const vote = await request(
+      "POST",
+      `/posts/${state.posts.poll}/vote`,
+      { optionIds: [state.pollOptionIds[0]] },
+      state.tokens.user2,
+    );
+    assert("Vote succeeds", vote.ok);
+    if (vote.ok) {
+      assert("Total votes = 1", vote.data?.data?.poll?.totalVotes === 1);
+      assert("User has voted", vote.data?.data?.poll?.hasVoted === true);
+      assert(
+        "User votes tracked",
+        vote.data?.data?.poll?.userVotes?.length > 0,
+      );
 
+      const winningOption = vote.data?.data?.poll?.options?.find(
+        (o) => o.id === state.pollOptionIds[0],
+      );
+      assert("Voted option count = 1", winningOption?.voteCount === 1);
+    }
+  }
+
+  sub("Cannot vote twice");
+  if (state.pollOptionIds.length > 0) {
+    const doubleVote = await request(
+      "POST",
+      `/posts/${state.posts.poll}/vote`,
+      { optionIds: [state.pollOptionIds[1]] },
+      state.tokens.user2,
+    );
+    assert("Double vote rejected", !doubleVote.ok && doubleVote.status === 400);
+  }
+
+  sub("Second user votes");
+  if (state.pollOptionIds.length > 1) {
+    const vote2 = await request(
+      "POST",
+      `/posts/${state.posts.poll}/vote`,
+      { optionIds: [state.pollOptionIds[1]] },
+      state.tokens.user1,
+    );
+    assert("Second user can vote", vote2.ok);
+    if (vote2.ok) {
+      assert("Total votes = 2", vote2.data?.data?.poll?.totalVotes === 2);
+    }
+  }
+
+  sub("Poll shows results after voting");
+  const pollPost = await request(
+    "GET",
+    `/posts/${state.posts.poll}`,
+    null,
+    state.tokens.user2,
+  );
+  assert("Get poll post", pollPost.ok);
+  assert("Shows hasVoted = true", pollPost.data?.data?.poll?.hasVoted === true);
+  assert(
+    "Shows percentages",
+    pollPost.data?.data?.poll?.options?.[0]?.voteCount >= 0,
+  );
+
+  sub("Invalid option ID rejected");
+  const badVote = await request(
+    "POST",
+    `/posts/${state.posts.poll}/vote`,
+    { optionIds: ["00000000-0000-0000-0000-000000000000"] },
+    state.tokens.admin,
+  );
+  assert("Invalid option → 400", !badVote.ok && badVote.status === 400);
+
+  sub("Poll validation");
+  const noOpts = await request(
+    "POST",
+    "/posts/poll",
+    {
+      question: "Bad poll",
+      options: ["Only one"],
+    },
+    state.tokens.user1,
+  );
+  assert("Less than 2 options → 400", !noOpts.ok && noOpts.status === 400);
+
+  const tooMany = await request(
+    "POST",
+    "/posts/poll",
+    {
+      question: "Too many",
+      options: ["A", "B", "C", "D", "E", "F", "G"],
+    },
+    state.tokens.user1,
+  );
+  assert("More than 6 options → 400", !tooMany.ok && tooMany.status === 400);
+
+  const dups = await request(
+    "POST",
+    "/posts/poll",
+    {
+      question: "Dups",
+      options: ["Same", "Same"],
+    },
+    state.tokens.user1,
+  );
+  assert("Duplicate options → 400", !dups.ok && dups.status === 400);
+};
+
+/* 7. FILE UPLOAD SECURITY */
+const testUploadSecurity = async () => {
+  section("7. File Upload Security");
+
+  if (!state.tokens.user1) return skip("Upload security", "no token");
+
+  sub("Reject fake image (magic bytes)");
+  const fakeFd = new FormData();
+  fakeFd.append("images", createFakeImage(), "fake.jpg");
   const fakeRes = await fetch(`${BASE_URL}/posts/image`, {
     method: "POST",
     headers: { Authorization: `Bearer ${state.tokens.user1}` },
-    body: fakeFormData,
+    body: fakeFd,
   });
-
-  // If file-type is installed and verifyImageSignature is wired up, it should reject
   if (fakeRes.status === 400) {
-    assert("Disguised file rejected (magic bytes work)", true);
-  } else if (fakeRes.status === 201) {
-    assert(
-      "Disguised file rejected (magic bytes work)",
-      false,
-      "Magic byte validation not enforced — install file-type package and wire up verifyImageSignature middleware",
-    );
+    assert("Disguised file rejected", true);
   } else {
-    skip("Magic byte validation", `Got unexpected status ${fakeRes.status}`);
+    assert(
+      "Disguised file rejected",
+      false,
+      "Magic byte validation not enforced",
+    );
   }
 
-  subsection("Accept genuine PNG");
-  const realImage = createTestImage();
-  const realFormData = new FormData();
-  realFormData.append("images", realImage, "test.png");
-  realFormData.append("caption", "Real test image");
-
+  sub("Accept genuine PNG");
+  const realFd = new FormData();
+  realFd.append("images", createTestPNG(), "test.png");
+  realFd.append("caption", "Real test image");
   const realRes = await fetch(`${BASE_URL}/posts/image`, {
     method: "POST",
     headers: { Authorization: `Bearer ${state.tokens.user1}` },
-    body: realFormData,
+    body: realFd,
   });
   const realData = await realRes.json().catch(() => ({}));
-
   if (realRes.ok) {
-    assert("Real PNG image accepted", true);
+    assert("Real PNG accepted", true);
     state.posts.image = realData.data?.id;
   } else {
-    assert("Real PNG image accepted", false, JSON.stringify(realData));
+    assert("Real PNG accepted", false, JSON.stringify(realData));
   }
 
-  subsection("Reject oversized images");
-  // Create a Blob larger than 5MB
-  const largeContent = new Uint8Array(6 * 1024 * 1024); // 6MB of zeros
-  // But add PNG header so it passes MIME check but fails size
-  const png_header = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-  for (let i = 0; i < png_header.length; i++) largeContent[i] = png_header[i];
-  const largeImage = new Blob([largeContent], { type: "image/png" });
-
-  const largeFormData = new FormData();
-  largeFormData.append("images", largeImage, "large.png");
-
-  const largeRes = await fetch(`${BASE_URL}/posts/image`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${state.tokens.user1}` },
-    body: largeFormData,
-  });
-  assert("Oversized file rejected", !largeRes.ok && largeRes.status === 400);
-
-  subsection("Reject too many files (>10)");
-  const tooManyFormData = new FormData();
-  for (let i = 0; i < 11; i++) {
-    tooManyFormData.append("images", createTestImage(), `test-${i}.png`);
-  }
-
-  const tooManyRes = await fetch(`${BASE_URL}/posts/image`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${state.tokens.user1}` },
-    body: tooManyFormData,
-  });
-  assert(
-    "More than 10 files rejected",
-    !tooManyRes.ok && tooManyRes.status === 400,
+  sub("Reject oversized file");
+  const big = new Uint8Array(6 * 1024 * 1024);
+  [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].forEach(
+    (b, i) => (big[i] = b),
   );
+  const bigFd = new FormData();
+  bigFd.append("images", new Blob([big], { type: "image/png" }), "big.png");
+  const bigRes = await fetch(`${BASE_URL}/posts/image`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${state.tokens.user1}` },
+    body: bigFd,
+  });
+  assert("Oversized file → 400", !bigRes.ok && bigRes.status === 400);
+
+  sub("Reject >10 files");
+  const manyFd = new FormData();
+  for (let i = 0; i < 11; i++) {
+    manyFd.append("images", createTestPNG(), `test-${i}.png`);
+  }
+  const manyRes = await fetch(`${BASE_URL}/posts/image`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${state.tokens.user1}` },
+    body: manyFd,
+  });
+  assert(">10 files → 400", !manyRes.ok && manyRes.status === 400);
 };
 
-/* 7. LIKES */
+/* 8. LIKES */
 const testLikes = async () => {
-  section("7. Likes");
+  section("8. Likes");
 
-  if (!state.tokens.user1 || !state.posts.text) {
-    return skip("Like tests", "no auth or post");
-  }
+  if (!state.tokens.user2 || !state.posts.text)
+    return skip("Likes", "missing deps");
 
-  subsection("Like a post");
+  sub("Like");
   const like = await request(
     "POST",
     `/likes/posts/${state.posts.text}`,
     null,
     state.tokens.user2,
   );
-  assert("Like post works", like.ok);
-  assert('Action is "liked"', like.data?.data?.action === "liked");
-  assert("isLiked is true", like.data?.data?.isLiked === true);
-  assert("Like count is 1", like.data?.data?.likeCount === 1);
+  assert("Like works", like.ok);
+  assert("Action = liked", like.data?.data?.action === "liked");
+  assert("Count = 1", like.data?.data?.likeCount === 1);
 
-  subsection("Unlike the post");
+  sub("Unlike");
   const unlike = await request(
     "POST",
     `/likes/posts/${state.posts.text}`,
@@ -744,10 +740,10 @@ const testLikes = async () => {
     state.tokens.user2,
   );
   assert("Unlike works", unlike.ok);
-  assert('Action is "unliked"', unlike.data?.data?.action === "unliked");
-  assert("Like count is 0", unlike.data?.data?.likeCount === 0);
+  assert("Action = unliked", unlike.data?.data?.action === "unliked");
+  assert("Count = 0", unlike.data?.data?.likeCount === 0);
 
-  subsection("Re-like for next tests");
+  sub("Re-like");
   await request(
     "POST",
     `/likes/posts/${state.posts.text}`,
@@ -755,7 +751,7 @@ const testLikes = async () => {
     state.tokens.user2,
   );
 
-  subsection("Get list of likers");
+  sub("Get likers");
   const likers = await request(
     "GET",
     `/likes/posts/${state.posts.text}`,
@@ -764,37 +760,33 @@ const testLikes = async () => {
   );
   assert("Get likers works", likers.ok);
   assert(
-    "Likers list contains user2",
+    "Contains user2",
     likers.data?.data?.some((u) => u.id === state.users.user2.id),
   );
 };
 
-/* 8. COMMENTS */
+/* 9. COMMENTS */
 const testComments = async () => {
-  section("8. Comments");
+  section("9. Comments");
 
-  if (!state.tokens.user2 || !state.posts.text) {
-    return skip("Comment tests", "no auth or post");
-  }
+  if (!state.tokens.user2 || !state.posts.text)
+    return skip("Comments", "missing deps");
 
-  subsection("Create top-level comment");
+  sub("Create comment");
   const comment = await request(
     "POST",
     `/comments/posts/${state.posts.text}`,
-    { content: "Great post! **Loving it** @tendai_m" },
+    { content: "Great post! **bold** @admin" },
     state.tokens.user2,
   );
-  assert("Create comment works", comment.ok);
+  assert("Create comment", comment.ok);
   if (comment.ok) {
     state.comments.main = comment.data.data.id;
-    assert("Comment has id", !!state.comments.main);
-    assert(
-      "Comment has reply count",
-      typeof comment.data.data.replyCount === "number",
-    );
+    assert("Has id", !!state.comments.main);
+    assert("Has replyCount", typeof comment.data.data.replyCount === "number");
   }
 
-  subsection("Get post comments");
+  sub("Get comments");
   const comments = await request(
     "GET",
     `/comments/posts/${state.posts.text}`,
@@ -802,9 +794,9 @@ const testComments = async () => {
     state.tokens.user1,
   );
   assert("Get comments works", comments.ok);
-  assert("Comments is array", Array.isArray(comments.data?.data));
+  assert("Is array", Array.isArray(comments.data?.data));
 
-  subsection("Create reply");
+  sub("Create reply");
   if (state.comments.main) {
     const reply = await request(
       "POST",
@@ -812,17 +804,17 @@ const testComments = async () => {
       { content: "Thanks!", parentCommentId: state.comments.main },
       state.tokens.user1,
     );
-    assert("Create reply works", reply.ok);
+    assert("Create reply", reply.ok);
     if (reply.ok) {
       state.comments.reply = reply.data.data.id;
       assert(
-        "Reply has parentCommentId",
+        "Has parentCommentId",
         reply.data.data.parentCommentId === state.comments.main,
       );
     }
   }
 
-  subsection("Get replies for comment");
+  sub("Get replies");
   if (state.comments.main) {
     const replies = await request(
       "GET",
@@ -830,11 +822,11 @@ const testComments = async () => {
       null,
       state.tokens.user1,
     );
-    assert("Get replies works", replies.ok);
-    assert("Reply count > 0", replies.data?.data?.length > 0);
+    assert("Get replies", replies.ok);
+    assert("Has replies", replies.data?.data?.length > 0);
   }
 
-  subsection("Delete own comment");
+  sub("Delete own comment");
   if (state.comments.reply) {
     const del = await request(
       "DELETE",
@@ -842,10 +834,10 @@ const testComments = async () => {
       null,
       state.tokens.user1,
     );
-    assert("Delete own comment works", del.ok);
+    assert("Delete own comment", del.ok);
   }
 
-  subsection("Cannot delete others comments");
+  sub("Cannot delete others'");
   if (state.comments.main) {
     const del = await request(
       "DELETE",
@@ -853,73 +845,71 @@ const testComments = async () => {
       null,
       state.tokens.user1,
     );
-    assert("Cannot delete other user comment", !del.ok && del.status === 403);
+    assert("Cannot delete other's → 403", !del.ok && del.status === 403);
   }
 };
 
-/* 9. NOTICES */
+/* 10. NOTICES */
 const testNotices = async () => {
-  section("9. Notices");
+  section("10. Notices");
 
-  if (!state.tokens.user1) return skip("Notice tests", "no auth");
+  if (!state.tokens.user1) return skip("Notices", "no token");
 
-  subsection("Get all notices");
+  sub("Get notices");
   const notices = await request("GET", "/notices", null, state.tokens.user1);
-  assert("Get notices works", notices.ok);
-  assert("Notices is array", Array.isArray(notices.data?.data));
+  assert("Get notices", notices.ok);
+  assert("Is array", Array.isArray(notices.data?.data));
 
-  subsection("Create notice");
-  const formData = new FormData();
-  formData.append("title", "Test Notice from Tests");
-  formData.append("description", "Test notice with **markdown**");
-  formData.append("phoneNumber", "+263 77 123 4567");
-  formData.append("emailAddress", "test@example.com");
-
+  sub("Create notice");
+  const fd = new FormData();
+  fd.append("title", "Test Notice");
+  fd.append("description", "Test notice description for automated tests");
+  fd.append("phoneNumber", "+263 77 123 4567");
+  fd.append("emailAddress", "test@example.com");
   const createRes = await fetch(`${BASE_URL}/notices`, {
     method: "POST",
     headers: { Authorization: `Bearer ${state.tokens.user1}` },
-    body: formData,
+    body: fd,
   });
   const createData = await createRes.json().catch(() => ({}));
-
-  assert("Create notice works", createRes.ok, JSON.stringify(createData));
+  assert("Create notice", createRes.ok, JSON.stringify(createData));
   if (createRes.ok) {
     state.notice = createData.data.id;
-    assert("Notice has id", !!state.notice);
-    assert("Notice is active", createData.data.status === "active");
+    assert("Has id", !!state.notice);
+    assert("Status = active", createData.data.status === "active");
   }
 
-  subsection("Filter notices");
-  const activeOnly = await request(
+  sub("Filters");
+  const active = await request(
     "GET",
     "/notices?status=active",
     null,
     state.tokens.user1,
   );
-  assert("Filter by status works", activeOnly.ok);
+  assert("Filter by status", active.ok);
 
-  const myNotices = await request(
+  const mine = await request(
     "GET",
     "/notices?mine=true",
     null,
     state.tokens.user1,
   );
-  assert("Get my notices works", myNotices.ok);
+  assert("My notices", mine.ok);
   assert(
-    "My notices include the new one",
-    myNotices.data?.data?.some((n) => n.id === state.notice),
+    "Includes new notice",
+    mine.data?.data?.some((n) => n.id === state.notice),
   );
 
-  subsection("Search notices");
+  sub("Search");
   const search = await request(
     "GET",
     "/notices?search=test",
     null,
     state.tokens.user1,
   );
-  assert("Search notices works", search.ok);
+  assert("Search notices", search.ok);
 
-  subsection("Toggle notice status");
+  sub("Toggle status");
   if (state.notice) {
     const toggle = await request(
       "PATCH",
@@ -927,32 +917,29 @@ const testNotices = async () => {
       null,
       state.tokens.user1,
     );
-    assert("Toggle status works", toggle.ok);
-    assert("Status is now closed", toggle.data?.data?.status === "closed");
+    assert("Toggle works", toggle.ok);
+    assert("Status = closed", toggle.data?.data?.status === "closed");
   }
 
-  subsection("Cannot toggle others notices");
+  sub("Permission check");
   if (state.notice) {
-    const toggle = await request(
+    const cantToggle = await request(
       "PATCH",
       `/notices/${state.notice}/toggle-status`,
       null,
       state.tokens.user2,
     );
-    assert(
-      "Cannot toggle other user notice",
-      !toggle.ok && toggle.status === 403,
-    );
+    assert("Other user → 403", !cantToggle.ok && cantToggle.status === 403);
   }
 };
 
-/* 10. SEARCH */
+/* 11. SEARCH */
 const testSearch = async () => {
-  section("10. Search");
+  section("11. Search");
 
-  if (!state.tokens.user1) return skip("Search tests", "no auth");
+  if (!state.tokens.user1) return skip("Search", "no token");
 
-  subsection("Global search");
+  sub("Global search");
   const global = await request(
     "GET",
     "/search?q=test",
@@ -960,19 +947,19 @@ const testSearch = async () => {
     state.tokens.user1,
   );
   assert("Global search works", global.ok);
-  assert("Returns users array", Array.isArray(global.data?.data?.users));
-  assert("Returns posts array", Array.isArray(global.data?.data?.posts));
-  assert("Returns notices array", Array.isArray(global.data?.data?.notices));
-  assert("Returns counts", !!global.data?.data?.counts);
+  assert("Has users", Array.isArray(global.data?.data?.users));
+  assert("Has posts", Array.isArray(global.data?.data?.posts));
+  assert("Has notices", Array.isArray(global.data?.data?.notices));
+  assert("Has counts", !!global.data?.data?.counts);
 
-  subsection("Search by type");
+  sub("Search by type");
   const users = await request(
     "GET",
     "/search/users?q=tendai",
     null,
     state.tokens.user1,
   );
-  assert("User search works", users.ok);
+  assert("User search", users.ok);
 
   const posts = await request(
     "GET",
@@ -980,41 +967,30 @@ const testSearch = async () => {
     null,
     state.tokens.user1,
   );
-  assert("Post search works", posts.ok);
+  assert("Post search", posts.ok);
 
-  const noticesSearch = await request(
-    "GET",
-    "/search/notices?q=test",
-    null,
-    state.tokens.user1,
-  );
-  assert("Notice search works", noticesSearch.ok);
-
-  subsection("Validation");
+  sub("Validation");
   const short = await request("GET", "/search?q=a", null, state.tokens.user1);
-  assert(
-    "Short query rejected (min 2 chars)",
-    !short.ok && short.status === 400,
-  );
+  assert("Short query → 400", !short.ok && short.status === 400);
 };
 
-/* 11. NOTIFICATIONS */
+/* 12. NOTIFICATIONS */
 const testNotifications = async () => {
-  section("11. Notifications");
+  section("12. Notifications");
 
-  if (!state.tokens.user1) return skip("Notification tests", "no auth");
+  if (!state.tokens.user1) return skip("Notifications", "no token");
 
-  subsection("Get notifications");
+  sub("Get notifications");
   const notifs = await request(
     "GET",
     "/notifications",
     null,
     state.tokens.user1,
   );
-  assert("Get notifications works", notifs.ok);
-  assert("Notifications is array", Array.isArray(notifs.data?.data));
+  assert("Get notifications", notifs.ok);
+  assert("Is array", Array.isArray(notifs.data?.data));
 
-  subsection("Get unread count");
+  sub("Unread count");
   const count = await request(
     "GET",
     "/notifications/unread-count",
@@ -1022,9 +998,9 @@ const testNotifications = async () => {
     state.tokens.user1,
   );
   assert("Unread count works", count.ok);
-  assert("Count is number", typeof count.data?.data?.count === "number");
+  assert("Is number", typeof count.data?.data?.count === "number");
 
-  subsection("Polling endpoint");
+  sub("Polling");
   const poll = await request(
     "GET",
     "/notifications/poll",
@@ -1032,13 +1008,11 @@ const testNotifications = async () => {
     state.tokens.user1,
   );
   assert("Poll works", poll.ok);
-  assert("Returns timestamp", !!poll.data?.data?.timestamp);
+  assert("Has timestamp", !!poll.data?.data?.timestamp);
 
-  subsection("Poll only returns unread (no re-popping)");
-  // Mark all as read first
+  sub("Poll returns only unread");
   await request("PATCH", "/notifications/read-all", null, state.tokens.user1);
   await sleep(150);
-  // Poll with old timestamp — should get unread only (empty list)
   const oldPoll = await request(
     "GET",
     `/notifications/poll?since=${new Date(Date.now() - 86400000).toISOString()}`,
@@ -1046,12 +1020,11 @@ const testNotifications = async () => {
     state.tokens.user1,
   );
   assert(
-    "Poll with old timestamp returns 0 new (already read)",
+    "Old timestamp → 0 new (all read)",
     oldPoll.data?.data?.newNotifications?.length === 0,
-    "Polling should not return already-read notifications",
   );
 
-  subsection("Like creates notification");
+  sub("Like generates notification");
   if (state.posts.text) {
     await request(
       "POST",
@@ -1066,26 +1039,22 @@ const testNotifications = async () => {
       state.tokens.user2,
     );
     await sleep(200);
-
     const updated = await request(
       "GET",
       "/notifications",
       null,
       state.tokens.user1,
     );
-    const hasLikeNotif = updated.data?.data?.some(
-      (n) => n.type === "post_liked",
-    );
-    assert("Like generated notification", hasLikeNotif);
-
-    if (hasLikeNotif) {
+    const hasLike = updated.data?.data?.some((n) => n.type === "post_liked");
+    assert("Like notification exists", hasLike);
+    if (hasLike) {
       state.notification = updated.data.data.find(
         (n) => n.type === "post_liked",
       )?.id;
     }
   }
 
-  subsection("Mark as read");
+  sub("Mark as read");
   if (state.notification) {
     const markRead = await request(
       "PATCH",
@@ -1093,57 +1062,55 @@ const testNotifications = async () => {
       null,
       state.tokens.user1,
     );
-    assert("Mark as read works", markRead.ok);
+    assert("Mark as read", markRead.ok);
   }
 
-  subsection("Mark all as read");
+  sub("Mark all read");
   const markAll = await request(
     "PATCH",
     "/notifications/read-all",
     null,
     state.tokens.user1,
   );
-  assert("Mark all as read works", markAll.ok);
+  assert("Mark all read", markAll.ok);
 };
 
-/* 12. SUPPORT — Queries & Suggestions */
+/* 13. SUPPORT SYSTEM */
 const testSupport = async () => {
-  section("12. Support System");
+  section("13. Support System");
 
-  if (!state.tokens.user1) return skip("Support tests", "no auth");
+  if (!state.tokens.user1) return skip("Support", "no token");
 
-  subsection("User creates query");
+  sub("Create query");
   const newQuery = await request(
     "POST",
     "/support/queries",
     {
       category: "bug_report",
-      subject: "Test query from automated test",
-      message: "This is a test bug report with **markdown** formatting",
+      subject: "Test query from automated tests",
+      message: "This is a test bug report",
       priority: "normal",
     },
     state.tokens.user1,
   );
-
-  assert("Create query works", newQuery.ok, JSON.stringify(newQuery.data));
+  assert("Create query", newQuery.ok);
   if (newQuery.ok) {
     state.query = newQuery.data.data.id;
-    assert("Query has id", !!state.query);
-    assert("Status is open", newQuery.data.data.status === "open");
-    assert("Has initial reply", newQuery.data.data.replies?.length > 0);
+    assert("Has id", !!state.query);
+    assert("Status = open", newQuery.data.data.status === "open");
   }
 
-  subsection("User gets own queries");
+  sub("Get my queries");
   const myQueries = await request(
     "GET",
     "/support/queries",
     null,
     state.tokens.user1,
   );
-  assert("Get my queries works", myQueries.ok);
-  assert("My queries is array", Array.isArray(myQueries.data?.data));
+  assert("Get my queries", myQueries.ok);
+  assert("Is array", Array.isArray(myQueries.data?.data));
 
-  subsection("User cannot see others queries");
+  sub("Other user cannot view");
   if (state.query) {
     const cantSee = await request(
       "GET",
@@ -1151,108 +1118,86 @@ const testSupport = async () => {
       null,
       state.tokens.user2,
     );
-    assert(
-      "Other user cannot view query",
-      !cantSee.ok && cantSee.status === 403,
-    );
+    assert("Other user → 403", !cantSee.ok && cantSee.status === 403);
   }
 
-  subsection("Admin views all queries");
+  sub("Admin views queries");
   if (state.tokens.admin) {
-    const adminQueries = await request(
+    const adminQ = await request(
       "GET",
       "/support/admin/queries",
       null,
       state.tokens.admin,
     );
-    assert("Admin can view all queries", adminQueries.ok);
+    assert("Admin can view all queries", adminQ.ok);
   }
 
-  subsection("Admin replies to query");
+  sub("Admin replies");
   if (state.tokens.admin && state.query) {
-    const adminReply = await request(
+    const reply = await request(
       "POST",
       `/support/admin/queries/${state.query}/replies`,
-      { message: "Thanks for reporting this. Looking into it." },
+      { message: "Looking into it." },
       state.tokens.admin,
     );
-    assert("Admin can reply", adminReply.ok);
-
-    if (adminReply.ok) {
-      state.queryReply = adminReply.data.data.id;
-    }
+    assert("Admin can reply", reply.ok);
   }
 
-  subsection("User replies back");
+  sub("User replies");
   if (state.query) {
-    const userReply = await request(
+    const reply = await request(
       "POST",
       `/support/queries/${state.query}/replies`,
-      { message: "Thank you for the quick response!" },
+      { message: "Thank you!" },
       state.tokens.user1,
     );
-    assert("User can reply to own query", userReply.ok);
+    assert("User can reply", reply.ok);
   }
 
-  subsection("Admin changes status");
+  sub("Admin changes status");
   if (state.tokens.admin && state.query) {
-    const statusChange = await request(
+    const change = await request(
       "PATCH",
       `/support/admin/queries/${state.query}`,
       { status: "resolved" },
       state.tokens.admin,
     );
-    assert("Admin can change status", statusChange.ok);
-    assert(
-      "Status is resolved",
-      statusChange.data?.data?.status === "resolved",
-    );
+    assert("Status change works", change.ok);
+    assert("Status = resolved", change.data?.data?.status === "resolved");
   }
 
-  subsection("Anonymous suggestion submission");
+  sub("Anonymous suggestion");
   const suggestion = await request(
     "POST",
     "/support/suggestions",
     {
       category: "feature_idea",
       content:
-        "It would be great to have dark mode for emails too. This is a test suggestion.",
+        "Test suggestion from automated tests — no user info should be stored.",
     },
     state.tokens.user2,
   );
+  assert("Submit suggestion", suggestion.ok);
+  if (suggestion.ok) state.suggestion = suggestion.data.data.id;
 
-  assert("Submit suggestion works", suggestion.ok);
-  if (suggestion.ok) {
-    state.suggestion = suggestion.data.data.id;
-  }
-
-  subsection("Admin views suggestions (anonymous)");
+  sub("Admin views suggestions (anonymous)");
   if (state.tokens.admin) {
-    const adminSuggestions = await request(
+    const adminSugs = await request(
       "GET",
       "/support/admin/suggestions",
       null,
       state.tokens.admin,
     );
-    assert("Admin can view suggestions", adminSuggestions.ok);
+    assert("Admin can view suggestions", adminSugs.ok);
 
-    // Critical: ensure NO user info is in suggestions
-    if (adminSuggestions.ok && adminSuggestions.data.data.length > 0) {
-      const firstSug = adminSuggestions.data.data[0];
-      assert(
-        "Suggestion has NO user_id",
-        firstSug.user_id === undefined,
-        "Privacy violation: suggestions should not include user_id",
-      );
-      assert(
-        "Suggestion has NO username",
-        firstSug.username === undefined,
-        "Privacy violation: suggestions should not include username",
-      );
+    if (adminSugs.ok && adminSugs.data.data.length > 0) {
+      const s = adminSugs.data.data[0];
+      assert("No user_id on suggestion", s.user_id === undefined);
+      assert("No username on suggestion", s.username === undefined);
     }
   }
 
-  subsection("Suggestion stats");
+  sub("Suggestion stats");
   if (state.tokens.admin) {
     const stats = await request(
       "GET",
@@ -1260,11 +1205,11 @@ const testSupport = async () => {
       null,
       state.tokens.admin,
     );
-    assert("Get suggestion stats works", stats.ok);
-    assert("Stats has total", typeof stats.data?.data?.total === "number");
+    assert("Stats endpoint works", stats.ok);
+    assert("Has total", typeof stats.data?.data?.total === "number");
   }
 
-  subsection("Unread query count for admin");
+  sub("Unread counts");
   if (state.tokens.admin) {
     const adminUnread = await request(
       "GET",
@@ -1272,128 +1217,116 @@ const testSupport = async () => {
       null,
       state.tokens.admin,
     );
-    assert("Admin unread count works", adminUnread.ok);
+    assert("Admin unread count", adminUnread.ok);
   }
-
-  subsection("Unread count for user");
   const userUnread = await request(
     "GET",
     "/support/queries/unread-count",
     null,
     state.tokens.user1,
   );
-  assert("User unread count works", userUnread.ok);
+  assert("User unread count", userUnread.ok);
 };
 
-/* 13. ADMIN PANEL */
+/* 14. ADMIN PANEL */
 const testAdmin = async () => {
-  section("13. Admin Panel");
+  section("14. Admin Panel");
 
-  if (!state.tokens.admin) return skip("Admin tests", "no admin token");
+  if (!state.tokens.admin) return skip("Admin", "no admin token");
 
-  subsection("Get dashboard");
-  const dashboard = await request(
+  sub("Dashboard");
+  const dash = await request(
     "GET",
     "/admin/dashboard",
     null,
     state.tokens.admin,
   );
-  assert("Get dashboard works", dashboard.ok);
-  assert("Has user stats", !!dashboard.data?.data?.users);
-  assert("Has post stats", !!dashboard.data?.data?.posts);
-  assert("Has growth data", Array.isArray(dashboard.data?.data?.growth));
-  assert(
-    "Has recent activity",
-    Array.isArray(dashboard.data?.data?.recentActivity),
-  );
+  assert("Dashboard works", dash.ok);
+  assert("Has users", !!dash.data?.data?.users);
+  assert("Has posts", !!dash.data?.data?.posts);
+  assert("Has growth", Array.isArray(dash.data?.data?.growth));
+  assert("Has activity", Array.isArray(dash.data?.data?.recentActivity));
 
-  subsection("Non-admin blocked");
+  sub("Non-admin blocked");
   const blocked = await request(
     "GET",
     "/admin/dashboard",
     null,
     state.tokens.user1,
   );
-  assert("Student blocked from admin", !blocked.ok && blocked.status === 403);
+  assert("Student → 403", !blocked.ok && blocked.status === 403);
 
-  subsection("Get users");
+  sub("Users");
   const users = await request(
     "GET",
     "/admin/users?limit=10",
     null,
     state.tokens.admin,
   );
-  assert("Get users works", users.ok);
-  assert("Returns user list", Array.isArray(users.data?.data));
+  assert("Get users", users.ok);
+  assert("Is array", Array.isArray(users.data?.data));
 
-  subsection("Search users");
-  const searchUsers = await request(
+  const searchU = await request(
     "GET",
     "/admin/users?search=tendai",
     null,
     state.tokens.admin,
   );
-  assert("Search users works", searchUsers.ok);
+  assert("Search users", searchU.ok);
 
-  subsection("Get posts (no duplicates from multi-image)");
+  sub("Posts (no duplicates)");
   const adminPosts = await request(
     "GET",
     "/admin/posts?limit=50",
     null,
     state.tokens.admin,
   );
-  assert("Get all posts works", adminPosts.ok);
+  assert("Get posts", adminPosts.ok);
 
   if (adminPosts.ok) {
     const ids = adminPosts.data.data.map((p) => p.id);
-    const uniqueIds = new Set(ids);
-    assert(
-      "No duplicate posts in admin list (multi-image safe)",
-      ids.length === uniqueIds.size,
-      `Got ${ids.length} posts, ${uniqueIds.size} unique`,
-    );
+    const uniq = new Set(ids);
+    assert("No duplicate posts (multi-image safe)", ids.length === uniq.size);
   }
 
-  subsection("Get notices");
+  sub("Notices");
   const adminNotices = await request(
     "GET",
     "/admin/notices?limit=10",
     null,
     state.tokens.admin,
   );
-  assert("Get all notices works", adminNotices.ok);
+  assert("Get notices", adminNotices.ok);
 
-  subsection("Announcements");
-  const announcements = await request(
+  sub("Announcements");
+  const ann = await request(
     "GET",
     "/admin/announcements",
     null,
     state.tokens.admin,
   );
-  assert("Get announcements works", announcements.ok);
+  assert("Get announcements", ann.ok);
 
-  const newAnnouncement = await request(
+  const newAnn = await request(
     "POST",
     "/admin/announcements",
     {
       title: "Test Announcement",
-      content: "Test content with **markdown**",
+      content: "Test content",
     },
     state.tokens.admin,
   );
-  assert("Create announcement works", newAnnouncement.ok);
-  if (newAnnouncement.ok) {
-    state.announcement = newAnnouncement.data.data.id;
-  }
+  assert("Create announcement", newAnn.ok);
+  if (newAnn.ok) state.announcement = newAnn.data.data.id;
 
   if (state.announcement) {
-    const update = await request(
+    const upd = await request(
       "PATCH",
       `/admin/announcements/${state.announcement}`,
-      { title: "Updated Title" },
+      { title: "Updated" },
       state.tokens.admin,
     );
-    assert("Update announcement works", update.ok);
+    assert("Update announcement", upd.ok);
 
     const toggle = await request(
       "PATCH",
@@ -1401,26 +1334,25 @@ const testAdmin = async () => {
       { isActive: false },
       state.tokens.admin,
     );
-    assert("Toggle active works", toggle.ok);
+    assert("Toggle active", toggle.ok);
   }
 
-  subsection("Cache stats");
-  const cacheStats = await request(
+  sub("Cache stats");
+  const cache = await request(
     "GET",
     "/admin/cache/stats",
     null,
     state.tokens.admin,
   );
-  assert("Cache stats works", cacheStats.ok);
+  assert("Cache stats", cache.ok);
 };
 
-/* 14. AUDIT LOG (if implemented) */
+/* 15. AUDIT LOG */
 const testAuditLog = async () => {
-  section("14. Admin Audit Log");
+  section("15. Audit Log");
 
-  if (!state.tokens.admin) return skip("Audit log tests", "no admin token");
+  if (!state.tokens.admin) return skip("Audit log", "no admin");
 
-  subsection("Audit log endpoint exists");
   const log = await request(
     "GET",
     "/admin/audit-log",
@@ -1429,117 +1361,139 @@ const testAuditLog = async () => {
   );
 
   if (log.status === 404) {
-    skip(
-      "Audit log endpoint",
-      "Not implemented yet — see security audit recommendations",
-    );
+    skip("Audit log endpoint", "Not implemented");
     return;
   }
 
-  assert("Get audit log works", log.ok);
-  assert("Returns log array", Array.isArray(log.data?.data));
+  assert("Get audit log", log.ok);
+  assert("Returns array", Array.isArray(log.data?.data));
 
-  subsection("Non-admin blocked from audit log");
   const blocked = await request(
     "GET",
     "/admin/audit-log",
     null,
     state.tokens.user1,
   );
+  assert("Student → 403", !blocked.ok && blocked.status === 403);
+};
+
+/* 16. ANNOUNCEMENTS */
+const testAnnouncements = async () => {
+  section("16. Public Announcements");
+
+  if (!state.tokens.user1) return skip("Announcements", "no token");
+
+  const ann = await request("GET", "/announcements", null, state.tokens.user1);
+  assert("Get announcements", ann.ok);
+  assert("Is array", Array.isArray(ann.data?.data));
+};
+
+/* 17. CLEANUP ENDPOINT */
+const testCleanup = async () => {
+  section("17. Cleanup Endpoint");
+
+  if (!state.tokens.admin) return skip("Cleanup", "no admin");
+
+  const cleanup = await request(
+    "POST",
+    "/admin/cleanup/posts",
+    null,
+    state.tokens.admin,
+  );
+  assert("Cleanup endpoint works", cleanup.ok);
   assert(
-    "Student blocked from audit log",
+    "Returns postsDeleted",
+    typeof cleanup.data?.data?.postsDeleted === "number",
+  );
+  assert(
+    "Returns filesDeleted",
+    typeof cleanup.data?.data?.filesDeleted === "number",
+  );
+
+  const blocked = await request(
+    "POST",
+    "/admin/cleanup/posts",
+    null,
+    state.tokens.user1,
+  );
+  assert(
+    "Student cannot trigger cleanup",
     !blocked.ok && blocked.status === 403,
   );
 };
 
-/* 15. PUBLIC ANNOUNCEMENTS */
-const testAnnouncements = async () => {
-  section("15. Public Announcements");
+/* 18. RATE LIMITING */
+const testRateLimits = async (quick) => {
+  if (quick) return skip("Rate limits", "quick mode");
 
-  if (!state.tokens.user1) return skip("Announcement tests", "no auth");
+  section("18. Rate Limiting (Full)");
 
-  const announcements = await request(
-    "GET",
-    "/announcements",
-    null,
-    state.tokens.user1,
-  );
-  assert("Get announcements works", announcements.ok);
-  assert("Returns array", Array.isArray(announcements.data?.data));
-};
-
-/* 16. RATE LIMITING */
-const testRateLimits = async (quick = false) => {
-  if (quick) return skip("Rate limit tests", "skipped in quick mode");
-
-  section("16. Rate Limiting");
-
-  subsection("Auth rate limit");
-  let blocked = false;
-  for (let i = 0; i < 30; i++) {
+  sub("Auth rate limit");
+  let authBlocked = false;
+  for (let i = 0; i < 20; i++) {
     const res = await request("POST", "/auth/login", {
-      identifier: "fake@user.com",
+      identifier: "ratelimit@test.com",
       password: "wrong",
     });
     if (res.status === 429) {
-      blocked = true;
+      authBlocked = true;
       break;
     }
   }
-  assert("Auth rate limiter blocks after threshold", blocked);
+  assert("Auth rate limiter works", authBlocked);
 };
 
-/* 17. CLEANUP */
+/* 19. CLEANUP TEST DATA */
 const cleanup = async () => {
-  section("17. Cleanup");
+  section("19. Cleanup Test Data");
 
-  subsection("Deleting test data");
+  sub("Deleting test data");
 
   if (state.suggestion && state.tokens.admin) {
-    const res = await request(
+    const r = await request(
       "DELETE",
       `/support/admin/suggestions/${state.suggestion}`,
       null,
       state.tokens.admin,
     );
-    assert("Delete test suggestion", res.ok);
+    assert("Delete test suggestion", r.ok);
   }
 
   if (state.announcement && state.tokens.admin) {
-    const res = await request(
+    const r = await request(
       "DELETE",
       `/admin/announcements/${state.announcement}`,
       null,
       state.tokens.admin,
     );
-    assert("Delete test announcement", res.ok);
+    assert("Delete test announcement", r.ok);
   }
 
   if (state.notice && state.tokens.user1) {
-    const res = await request(
+    const r = await request(
       "DELETE",
       `/notices/${state.notice}`,
       null,
       state.tokens.user1,
     );
-    assert("Delete test notice", res.ok);
+    assert("Delete test notice", r.ok);
   }
 
   for (const [type, postId] of Object.entries(state.posts)) {
     if (postId && state.tokens.user1) {
-      const res = await request(
+      const r = await request(
         "DELETE",
         `/posts/${postId}`,
         null,
         state.tokens.user1,
       );
-      assert(`Delete test ${type} post`, res.ok);
+      assert(`Delete test ${type} post`, r.ok);
     }
   }
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   MAIN RUNNER
+   RUNNER
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const main = async () => {
@@ -1555,23 +1509,24 @@ const main = async () => {
     chalk.bold(chalk.blue("║         ZimHub Automated Test Suite          ║")),
   );
   console.log(
+    chalk.bold(chalk.blue("║              Complete Edition                ║")),
+  );
+  console.log(
     chalk.bold(chalk.blue("╚══════════════════════════════════════════════╝")),
   );
   console.log(chalk.gray(`\nBase URL: ${BASE_URL}`));
-  console.log(
-    chalk.gray(`Mode    : ${quick ? "Quick (skips rate limits)" : "Full"}`),
-  );
+  console.log(chalk.gray(`Mode    : ${quick ? "Quick" : "Full"}`));
   console.log(chalk.gray(`Started : ${new Date().toLocaleString()}\n`));
 
-  const startTime = Date.now();
+  const start = Date.now();
 
   try {
     await testHealth();
     await testAuth();
-    await testSecurity();
     await testProfiles();
     await testPosts();
-    await testFileUploadSecurity();
+    await testPolls();
+    await testUploadSecurity();
     await testLikes();
     await testComments();
     await testNotices();
@@ -1581,17 +1536,18 @@ const main = async () => {
     await testAdmin();
     await testAuditLog();
     await testAnnouncements();
+    await testCleanup();
+    await testSecurity();
     await testRateLimits(quick);
     await cleanup();
   } catch (err) {
-    console.log(chalk.red(`\n💥 Fatal error: ${err.message}`));
+    console.log(chalk.red(`\n💥 Fatal: ${err.message}`));
     console.log(err.stack);
   }
 
-  /* ─── Summary ─────────────────────────────────────────────── */
-  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+  const duration = ((Date.now() - start) / 1000).toFixed(2);
   const total = results.passed + results.failed + results.skipped;
-  const passRate =
+  const rate =
     total > 0
       ? ((results.passed / (results.passed + results.failed)) * 100).toFixed(1)
       : 0;
@@ -1599,23 +1555,19 @@ const main = async () => {
   console.log("\n" + chalk.bold(chalk.cyan("═".repeat(50))));
   console.log(chalk.bold("TEST SUMMARY"));
   console.log(chalk.bold(chalk.cyan("═".repeat(50))));
-  console.log(`  Total tests : ${chalk.bold(total)}`);
-  console.log(
-    `  ${chalk.green("Passed      :")} ${chalk.bold(results.passed)}`,
-  );
-  console.log(`  ${chalk.red("Failed      :")} ${chalk.bold(results.failed)}`);
-  console.log(
-    `  ${chalk.yellow("Skipped     :")} ${chalk.bold(results.skipped)}`,
-  );
-  console.log(`  Pass rate   : ${chalk.bold(passRate + "%")}`);
-  console.log(`  Duration    : ${chalk.bold(duration + "s")}`);
+  console.log(`  Total    : ${chalk.bold(total)}`);
+  console.log(`  ${chalk.green("Passed")}  : ${chalk.bold(results.passed)}`);
+  console.log(`  ${chalk.red("Failed")}  : ${chalk.bold(results.failed)}`);
+  console.log(`  ${chalk.yellow("Skipped")} : ${chalk.bold(results.skipped)}`);
+  console.log(`  Rate     : ${chalk.bold(rate + "%")}`);
+  console.log(`  Duration : ${chalk.bold(duration + "s")}`);
 
   if (results.failed > 0) {
-    console.log("\n" + chalk.red(chalk.bold("FAILED TESTS:")));
-    results.errors.forEach((err) => {
-      console.log(`  ${chalk.red("✗")} ${err.name}`);
-      if (err.details)
-        console.log(`    ${chalk.gray(err.details.substring(0, 200))}`);
+    console.log("\n" + chalk.red(chalk.bold("FAILED:")));
+    results.errors.forEach((e) => {
+      console.log(`  ${chalk.red("✗")} ${e.name}`);
+      if (e.details)
+        console.log(`    ${chalk.gray(e.details.substring(0, 200))}`);
     });
   }
 

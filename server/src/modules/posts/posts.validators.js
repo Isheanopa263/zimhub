@@ -74,7 +74,7 @@ const feedQueryValidator = [
 
   query("type")
     .optional()
-    .isIn(["video", "image", "text", "link", "all"])
+    .isIn(["video", "image", "text", "link", "poll", "all"])
     .withMessage("Invalid post type filter"),
 ];
 
