@@ -1,12 +1,12 @@
 import {
   X,
-  Github,
   Linkedin,
   Mail,
   Heart,
   Users,
   Sparkles,
   Code,
+  Send,
 } from "lucide-react";
 
 import useTheme from "../../hooks/useTheme";
@@ -51,7 +51,7 @@ const AboutModal = ({ isOpen, onClose }) => {
           fontFamily: "Inter, system-ui, sans-serif",
         }}
       >
-        {/* ── Header ── */}
+        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -90,7 +90,7 @@ const AboutModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* ── Body ── */}
+        {/* Body */}
         <div style={{ flex: 1, overflow: "auto", padding: "24px 20px" }}>
           {/* Hero */}
           <div
@@ -129,7 +129,7 @@ const AboutModal = ({ isOpen, onClose }) => {
             </p>
           </div>
 
-          {/* ── What is ZimHub ── */}
+          {/* What is ZimHub */}
           <Section c={c} icon={Sparkles} title="What is ZimHub?">
             <p>
               A private social platform built exclusively for Zimbabwean
@@ -140,7 +140,7 @@ const AboutModal = ({ isOpen, onClose }) => {
             </p>
           </Section>
 
-          {/* ── Features ── */}
+          {/* Features */}
           <Section c={c} icon={Heart} title="What you can do">
             <ul style={{ paddingLeft: "18px", margin: 0 }}>
               <li>Share videos, photos, text posts and links</li>
@@ -151,7 +151,7 @@ const AboutModal = ({ isOpen, onClose }) => {
             </ul>
           </Section>
 
-          {/* ── Tech ── */}
+          {/* Built with */}
           <Section c={c} icon={Code} title="Built with">
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
               {[
@@ -181,101 +181,107 @@ const AboutModal = ({ isOpen, onClose }) => {
             </div>
           </Section>
 
-          {/* ── Developer ── */}
-          <Section c={c} icon={Users} title="Meet the developer">
+          {/* Developers */}
+          <Section c={c} icon={Users} title="Meet the developers">
             <div
               style={{
-                background: isDark
-                  ? "linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.08))"
-                  : "linear-gradient(135deg, rgba(59,130,246,0.05), rgba(139,92,246,0.03))",
-                borderRadius: "14px",
-                padding: "20px",
-                border: `1px solid ${c.accent}25`,
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
                 marginTop: "8px",
               }}
             >
-              {/* Avatar + Name */}
-              <div
+              {/* Developer 1 — Isheanopa */}
+              <DeveloperCard
+                c={c}
+                isDark={isDark}
+                name="Isheanopa Mangwende"
+                role="Full-Stack Developer"
+                letter="I"
+                linkedIn="https://www.linkedin.com/in/isheanopa-mangwende/"
+              />
+
+              {/* Developer 2 — Takudzwa */}
+              <DeveloperCard
+                c={c}
+                isDark={isDark}
+                name="Takudzwa Munyawarara"
+                role="SOC Analyst"
+                letter="T"
+                linkedIn="https://www.linkedin.com/in/takudzwa-munyawarara-3951b4334/"
+              />
+            </div>
+          </Section>
+
+          {/* Contact Us */}
+          <Section c={c} icon={Send} title="Contact us">
+            <div style={{ marginTop: "8px" }}>
+              <a
+                href="mailto:ishythrillar@gmail.com"
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "14px",
-                  marginBottom: "16px",
+                  gap: "12px",
+                  padding: "14px 16px",
+                  background: isDark
+                    ? "linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.08))"
+                    : "linear-gradient(135deg, rgba(59,130,246,0.05), rgba(139,92,246,0.03))",
+                  borderRadius: "14px",
+                  textDecoration: "none",
+                  border: `1px solid ${c.accent}25`,
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.boxShadow = c.shadowMd;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
                 <div
                   style={{
-                    width: "56px",
-                    height: "56px",
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg,#3B82F6,#8b5cf6)",
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "12px",
+                    background: "linear-gradient(135deg, #3B82F6, #2563eb)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: "#fff",
-                    fontWeight: 900,
-                    fontSize: "22px",
                     flexShrink: 0,
+                    boxShadow: "0 4px 12px rgba(59,130,246,0.3)",
                   }}
                 >
-                  I
+                  <Mail size={20} color="#ffffff" />
                 </div>
                 <div>
                   <p
                     style={{
-                      fontSize: "16px",
-                      fontWeight: 800,
+                      fontSize: "14px",
+                      fontWeight: 700,
                       color: c.text,
-                      margin: 0,
+                      margin: "0 0 2px",
                     }}
                   >
-                    Isheanopa Mangwende
+                    Get in touch
                   </p>
                   <p
                     style={{
-                      fontSize: "12px",
-                      color: c.textTer,
-                      margin: "2px 0 0",
-                      fontWeight: 500,
+                      fontSize: "13px",
+                      color: c.accent,
+                      margin: 0,
+                      fontWeight: 600,
                     }}
                   >
-                    Full-Stack Developer
+                    ishythrillar@gmail.com
                   </p>
                 </div>
-              </div>
-
-              {/* Contact links */}
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
-              >
-                <ContactLink
-                  href="mailto:ishythrillar@gmail.com"
-                  icon={Mail}
-                  label="ishythrillar@gmail.com"
-                  color={c.accent}
-                  c={c}
-                />
-                <ContactLink
-                  href="https://github.com/Isheanopa263"
-                  icon={Github}
-                  label="github.com/Isheanopa263"
-                  color={c.text}
-                  c={c}
-                  external
-                />
-                <ContactLink
-                  href="https://www.linkedin.com/in/isheanopa-mangwende/"
-                  icon={Linkedin}
-                  label="linkedin.com/in/isheanopa-mangwende"
-                  color="#0077B5"
-                  c={c}
-                  external
-                />
-              </div>
+              </a>
             </div>
           </Section>
 
-          {/* ── Footer ── */}
+          {/* Footer */}
           <div
             style={{
               marginTop: "24px",
@@ -317,7 +323,7 @@ const AboutModal = ({ isOpen, onClose }) => {
   );
 };
 
-/* ─── Section ──────────────────────────────────────────────────── */
+/* ─── Section ─── */
 const Section = ({ icon: Icon, title, children, c }) => (
   <div style={{ marginBottom: "20px" }}>
     <div
@@ -354,55 +360,113 @@ const Section = ({ icon: Icon, title, children, c }) => (
   </div>
 );
 
-/* ─── Contact Link ─────────────────────────────────────────────── */
-const ContactLink = ({
-  href,
-  icon: Icon,
-  label,
-  color,
-  c,
-  external = false,
-}) => (
-  <a
-    href={href}
-    target={external ? "_blank" : undefined}
-    rel={external ? "noopener noreferrer" : undefined}
+/* ─── Developer Card ─── */
+const DeveloperCard = ({ c, isDark, name, role, letter, linkedIn }) => (
+  <div
     style={{
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      padding: "10px 12px",
-      background: c.bgCard,
-      borderRadius: "10px",
-      textDecoration: "none",
-      color: color,
-      fontSize: "13px",
-      fontWeight: 600,
-      fontFamily: "Inter, sans-serif",
-      border: `1px solid ${c.border}`,
-      transition: "all 0.15s ease",
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.background = c.bgHover;
-      e.currentTarget.style.transform = "translateX(2px)";
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.background = c.bgCard;
-      e.currentTarget.style.transform = "translateX(0)";
+      background: isDark
+        ? "linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.08))"
+        : "linear-gradient(135deg, rgba(59,130,246,0.05), rgba(139,92,246,0.03))",
+      borderRadius: "14px",
+      padding: "16px",
+      border: `1px solid ${c.accent}25`,
     }}
   >
-    <Icon size={15} />
-    <span
+    <div
       style={{
-        flex: 1,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
       }}
     >
-      {label}
-    </span>
-  </a>
+      {/* Avatar */}
+      <div
+        style={{
+          width: "48px",
+          height: "48px",
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #3B82F6, #8b5cf6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#fff",
+          fontWeight: 900,
+          fontSize: "20px",
+          flexShrink: 0,
+          boxShadow: "0 4px 12px rgba(59,130,246,0.3)",
+        }}
+      >
+        {letter}
+      </div>
+
+      {/* Info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p
+          style={{
+            fontSize: "15px",
+            fontWeight: 800,
+            color: c.text,
+            margin: 0,
+          }}
+        >
+          {name}
+        </p>
+        <p
+          style={{
+            fontSize: "12px",
+            color: c.textTer,
+            margin: "2px 0 0",
+            fontWeight: 500,
+          }}
+        >
+          {role}
+        </p>
+      </div>
+    </div>
+
+    {/* LinkedIn */}
+    <a
+      href={linkedIn}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "10px 12px",
+        background: c.bgCard,
+        borderRadius: "10px",
+        textDecoration: "none",
+        color: "#0077B5",
+        fontSize: "13px",
+        fontWeight: 600,
+        fontFamily: "Inter, sans-serif",
+        border: `1px solid ${c.border}`,
+        transition: "all 0.15s ease",
+        marginTop: "12px",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = c.bgHover;
+        e.currentTarget.style.transform = "translateX(2px)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = c.bgCard;
+        e.currentTarget.style.transform = "translateX(0)";
+      }}
+    >
+      <Linkedin size={16} />
+      <span
+        style={{
+          flex: 1,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        LinkedIn Profile
+      </span>
+    </a>
+  </div>
 );
 
 export default AboutModal;

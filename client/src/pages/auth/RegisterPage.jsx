@@ -521,6 +521,10 @@ const RegisterPage = () => {
                 >
                   {formData?.email}
                 </p>
+                <br />
+                <p style={{ fontSize: "14px", color: c.textTer, margin: 0 }}>
+                  If you cannot see the email, check your spam folder
+                </p>
               </div>
 
               <div style={{ marginBottom: "20px" }}>
