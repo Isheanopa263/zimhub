@@ -215,39 +215,65 @@ const FeedPage = () => {
   /* Loading */
   if (loading && posts.length === 0) {
     return (
-      <div
-        style={{
-          height: `${availableHeight}px`,
-          overflow: "hidden",
-          background: "#000",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <>
         <div
           style={{
-            width: "48px",
-            height: "48px",
-            border: "4px solid rgba(255,255,255,0.1)",
-            borderTop: `4px solid ${c.accent}`,
-            borderRadius: "50%",
-            animation: "spin 0.8s linear infinite",
+            height: `${availableHeight}px`,
+            overflow: "hidden",
+            background: "#000",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              border: "4px solid rgba(255,255,255,0.1)",
+              borderTop: `4px solid ${c.accent}`,
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+            }}
+          />
+          <style>{`
+          @keyframes spin {
+            from { transform: rotate(0); }
+            to   { transform: rotate(360deg); }
+          }
+        `}</style>
+        </div>
+        <CreatePostModal
+          onPostCreated={(newPost) => {
+            if (newPost) {
+              addPost(newPost);
+              setTimeout(() => loadFeed(activeFilter), 500);
+            }
           }}
         />
-      </div>
+      </>
     );
   }
 
   /* Empty */
   if (!loading && posts.length === 0) {
     return (
-      <EmptyFeed
-        onCreatePost={openCreatePost}
-        filter={activeFilter}
-        c={c}
-        height={availableHeight}
-      />
+      <>
+        <EmptyFeed
+          onCreatePost={openCreatePost}
+          filter={activeFilter}
+          c={c}
+          height={availableHeight}
+        />
+        <CreatePostModal
+          onPostCreated={(newPost) => {
+            if (newPost) {
+              addPost(newPost);
+              setTimeout(() => loadFeed(activeFilter), 500);
+            }
+          }}
+        />
+      </>
     );
   }
 
