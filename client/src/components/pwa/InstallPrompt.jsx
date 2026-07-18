@@ -177,30 +177,18 @@ const InstallPrompt = () => {
                 gap: "14px",
               }}
             >
-              <div
+              <img
+                src={`${import.meta.env.BASE_URL || "/"}logo-192.png`}
+                alt="ZimHub"
                 style={{
                   width: "56px",
                   height: "56px",
                   borderRadius: "16px",
-                  background: "rgba(255,255,255,0.2)",
-                  backdropFilter: "blur(8px)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  objectFit: "cover",
                   border: "2px solid rgba(255,255,255,0.3)",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
                 }}
-              >
-                <span
-                  style={{
-                    color: "#ffffff",
-                    fontWeight: 900,
-                    fontSize: "24px",
-                    fontFamily: "Inter, sans-serif",
-                  }}
-                >
-                  Z
-                </span>
-              </div>
+              />
 
               <div>
                 <h2

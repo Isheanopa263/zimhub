@@ -3,18 +3,11 @@ import useTheme from "../../hooks/useTheme";
 const Logo = ({ size = "md", showText = true }) => {
   const { c } = useTheme();
 
-  const iconSizes = {
-    sm: "w-8 h-8 text-xs",
-    md: "w-10 h-10 text-sm",
-    lg: "w-14 h-14 text-lg",
-    xl: "w-20 h-20 text-2xl",
-  };
-
   const iconSize = {
-    sm: { w: 32, h: 32, font: 13 },
-    md: { w: 40, h: 40, font: 15 },
-    lg: { w: 56, h: 56, font: 22 },
-    xl: { w: 80, h: 80, font: 32 },
+    sm: { w: 32, h: 32, font: 18 },
+    md: { w: 40, h: 40, font: 20 },
+    lg: { w: 56, h: 56, font: 30 },
+    xl: { w: 80, h: 80, font: 36 },
   };
 
   const textSize = {
@@ -24,31 +17,52 @@ const Logo = ({ size = "md", showText = true }) => {
     xl: "36px",
   };
 
-  const iconConfig = iconSize[size] || iconSize.md;
+  const config = iconSize[size] || iconSize.md;
+  const basePath = import.meta.env.BASE_URL || "/";
 
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "12px",
+        gap: size === "xl" ? "0" : "12px",
+        flexDirection: size === "xl" ? "column" : "row",
       }}
     >
+      <img
+        src={`${basePath}logo-192.png`}
+        alt="ZimHub"
+        style={{
+          width: `${config.w}px`,
+          height: `${config.h}px`,
+          borderRadius: `${Math.floor(config.w * 0.22)}px`,
+          objectFit: "cover",
+          display: "block",
+          boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)",
+        }}
+        onError={(e) => {
+          // Fallback to text Z if image fails
+          e.target.style.display = "none";
+          e.target.nextSibling.style.display = "flex";
+        }}
+      />
+
+      {/* Fallback Z icon (hidden by default) */}
       <div
         style={{
-          width: `${iconConfig.w}px`,
-          height: `${iconConfig.h}px`,
-          borderRadius: "16px",
-          display: "flex",
+          width: `${config.w}px`,
+          height: `${config.h}px`,
+          borderRadius: `${Math.floor(config.w * 0.22)}px`,
+          display: "none",
           alignItems: "center",
           justifyContent: "center",
           fontWeight: 900,
           color: "#ffffff",
           background:
             "linear-gradient(135deg, #3B82F6 0%, #2563eb 50%, #1d4ed8 100%)",
-          boxShadow: "0 8px 32px rgba(59, 130, 246, 0.35)",
+          boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)",
           fontFamily: "Inter, sans-serif",
-          fontSize: `${iconConfig.font}px`,
+          fontSize: `${config.font}px`,
         }}
       >
         Z
@@ -60,12 +74,12 @@ const Logo = ({ size = "md", showText = true }) => {
             fontSize: textSize[size] || textSize.md,
             fontWeight: 900,
             letterSpacing: "-0.5px",
-            margin: 0,
+            margin: size === "xl" ? "12px 0 0" : 0,
             fontFamily: "Inter, sans-serif",
           }}
         >
           <span style={{ color: c.text }}>Zim</span>
-          <span style={{ color: c.accentText }}>Hub</span>
+          <span style={{ color: c.accent }}>Hub</span>
         </h1>
       )}
     </div>

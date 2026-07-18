@@ -234,30 +234,18 @@ const Sidebar = ({ unreadNotifications = 0 }) => {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div
+            <img
+              src={`${import.meta.env.BASE_URL || "/"}logo-192.png`}
+              alt="ZimHub"
               style={{
                 width: "36px",
                 height: "36px",
                 borderRadius: "10px",
-                background: "linear-gradient(135deg, #3B82F6, #1d4ed8)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                objectFit: "cover",
                 flexShrink: 0,
                 boxShadow: "0 4px 14px rgba(59,130,246,0.3)",
               }}
-            >
-              <span
-                style={{
-                  color: "#fff",
-                  fontWeight: 900,
-                  fontSize: "16px",
-                  fontFamily: "Inter, sans-serif",
-                }}
-              >
-                Z
-              </span>
-            </div>
+            />
             <span
               style={{
                 fontSize: "20px",
