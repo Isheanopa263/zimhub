@@ -113,8 +113,8 @@ const updateProfile = async (
       if (current.avatar_url) {
         deleteFile(current.avatar_url, "avatars");
       }
-      const storedUrl = await uploadFile(avatarFile.filename, "avatars");
-      profileParams.push(storedUrl);
+      const avatarUrl = await uploadFile(avatarFile.filename, "avatars");
+      profileParams.push(avatarUrl);
       profileUpdates.push(`avatar_url = $${profileParams.length}`);
     }
 

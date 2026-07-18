@@ -11,9 +11,12 @@ const createNotice = async (userId, data, file = null) => {
     data;
 
   try {
-    const posterUrl = file?.filename
-      ? await uploadFile(file.filename, "notices")
-      : null;
+    // Upload poster to R2 if file exists
+    let posterUrl = null;
+    if (file?.filename) {
+      posterUrl = await uploadFile(file.filename, "notices");
+    }
+
     const result = await query(
       `INSERT INTO notices (
          user_id, title, description, poster_url,
@@ -34,6 +37,7 @@ const createNotice = async (userId, data, file = null) => {
 
     return await getNoticeById(result.rows[0].id);
   } catch (error) {
+    // Clean up uploaded file on error
     if (file?.filename) deleteFile(file.filename, "notices");
     throw error;
   }
@@ -178,7 +182,10 @@ const updateNotice = async (noticeId, userId, data, file = null) => {
     if (existing.rows[0].poster_url) {
       deleteFile(existing.rows[0].poster_url, "notices");
     }
-    params.push(file.filename);
+
+    // Upload new poster to R2
+    const newPosterUrl = await uploadFile(file.filename, "notices");
+    params.push(newPosterUrl);
     updates.push(`poster_url = $${params.length}`);
   }
 
