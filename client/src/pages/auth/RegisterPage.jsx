@@ -454,24 +454,34 @@ const RegisterPage = () => {
                     textAlign: "center",
                     marginTop: "12px",
                     lineHeight: 1.5,
+                    fontFamily: "Inter, sans-serif",
                   }}
                 >
                   By creating an account, you agree to our{" "}
-                  <a
-                    href="/zimhub/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() =>
+                      window.open(
+                        `${import.meta.env.BASE_URL || "/"}privacy`,
+                        "_blank",
+                      )
+                    }
                     style={{
+                      background: "none",
+                      border: "none",
                       color: c.accent,
                       fontWeight: 700,
                       textDecoration: "underline",
                       textUnderlineOffset: "2px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      fontFamily: "inherit",
+                      padding: 0,
                     }}
                   >
                     Privacy Policy
-                  </a>
-                  . Ghost accounts are allowed but a valid email is required.
-                  Only admins can see your email.
+                  </button>
+                  .
                 </p>
               </form>
 

@@ -38,18 +38,13 @@ const PrivacyPolicyPage = () => {
         }}
       >
         <button
-          onClick={() => navigate(-1)}
-          style={{
-            background: c.bgHover,
-            border: "none",
-            borderRadius: "10px",
-            width: "34px",
-            height: "34px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: c.text,
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              window.close();
+              setTimeout(() => navigate("/login"), 100);
+            }
           }}
         >
           <ArrowLeft size={18} />
@@ -134,17 +129,6 @@ const PrivacyPolicyPage = () => {
               "Support queries and messages",
               "Poll votes",
               "Likes",
-            ]}
-          />
-        </SubSection>
-
-        <SubSection c={c} title="Automatically Collected">
-          <BulletList
-            c={c}
-            items={[
-              "Login timestamps",
-              "Device type (mobile/desktop) for responsive design",
-              "Anonymous suggestion box submissions use a hashed IP for rate limiting only — we cannot identify you from this hash",
             ]}
           />
         </SubSection>
@@ -240,24 +224,6 @@ const PrivacyPolicyPage = () => {
         </HighlightBox>
       </PolicySection>
 
-      {/* Data Storage */}
-      <PolicySection c={c} icon={Lock} title="Data Security & Storage">
-        <BulletList
-          c={c}
-          items={[
-            "Passwords are encrypted using bcrypt (industry standard) — we cannot see your password",
-            "All data is transmitted over HTTPS (encrypted in transit)",
-            "Authentication uses JWT tokens that expire after 15 minutes",
-            "Refresh tokens are stored securely and can be revoked",
-            "Media files (images, videos) are stored on Cloudflare R2 (encrypted at rest)",
-            "Database is hosted on Supabase with automatic backups",
-            "Posts are automatically deleted after 7 days",
-            "Expired OTP codes are cleaned up automatically",
-            "Admin actions are logged in an audit trail for accountability",
-          ]}
-        />
-      </PolicySection>
-
       {/* Content Policy */}
       <PolicySection c={c} icon={Globe} title="Content Policy">
         <p style={textStyle(c)}>
@@ -279,20 +245,6 @@ const PrivacyPolicyPage = () => {
           Violations may result in content removal, account suspension, or
           permanent ban at the discretion of platform administrators.
         </p>
-      </PolicySection>
-
-      {/* Notifications */}
-      <PolicySection c={c} icon={Bell} title="Notifications & Communication">
-        <BulletList
-          c={c}
-          items={[
-            "In-app notifications for likes, comments, and admin announcements",
-            "Email notifications only for: OTP verification, password reset, and account deletion",
-            "We will never send marketing or promotional emails",
-            "Admin announcements appear in the app — not via email",
-            "You can mark notifications as read or delete them",
-          ]}
-        />
       </PolicySection>
 
       {/* Your Rights */}
@@ -432,6 +384,45 @@ const PrivacyPolicyPage = () => {
           directly.
         </p>
       </PolicyCard>
+      {/* Close / Go Back Button */}
+      <div
+        style={{
+          textAlign: "center",
+          padding: "20px 0",
+        }}
+      >
+        <button
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              window.close();
+              setTimeout(() => navigate("/login"), 100);
+            }
+          }}
+          style={{
+            padding: "14px 32px",
+            background: "linear-gradient(135deg, #3B82F6, #2563eb)",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "14px",
+            fontSize: "15px",
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: "Inter, sans-serif",
+            boxShadow: "0 4px 14px rgba(59,130,246,0.3)",
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-1px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+          }}
+        >
+          ← Go Back
+        </button>
+      </div>
     </div>
   );
 };
