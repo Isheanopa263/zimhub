@@ -15,6 +15,7 @@ import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/admin/AdminPage";
 import SupportPage from "./pages/SupportPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 
 import useAuthStore from "./store/authStore";
 import useNotificationStore from "./store/notificationStore";
@@ -66,6 +67,8 @@ const App = () => {
           </PublicRoute>
         }
       />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+
       <Route
         path="/forgot-password"
         element={
@@ -89,6 +92,8 @@ const App = () => {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+
         <Route
           path="/admin"
           element={

@@ -209,7 +209,7 @@ const LoginPage = () => {
                 margin: 0,
               }}
             >
-              Welcome back 👋
+              Welcome👋
             </h1>
             <p
               style={{

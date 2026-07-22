@@ -453,9 +453,25 @@ const RegisterPage = () => {
                     color: c.textMuted,
                     textAlign: "center",
                     marginTop: "12px",
+                    lineHeight: 1.5,
                   }}
                 >
-                  We'll send a verification code to your email
+                  By creating an account, you agree to our{" "}
+                  <a
+                    href="/zimhub/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: c.accent,
+                      fontWeight: 700,
+                      textDecoration: "underline",
+                      textUnderlineOffset: "2px",
+                    }}
+                  >
+                    Privacy Policy
+                  </a>
+                  . Ghost accounts are allowed but a valid email is required.
+                  Only admins can see your email.
                 </p>
               </form>
 

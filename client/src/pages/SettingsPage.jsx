@@ -12,6 +12,7 @@ import {
   Mail,
   Info,
   HelpCircle,
+  FileText,
 } from "lucide-react";
 
 import useAuthStore from "../store/authStore";
@@ -155,6 +156,15 @@ const SettingsPage = () => {
           title="About ZimHub"
           description="App info, version & developer"
           onClick={() => setAboutOpen(true)}
+        />
+        <SettingButton
+          c={c}
+          icon={FileText}
+          iconColor={c.success}
+          iconBg={c.successLight}
+          title="Privacy Policy"
+          description="How we handle your data"
+          onClick={() => navigate("/privacy-policy")}
         />
       </Section>
 
