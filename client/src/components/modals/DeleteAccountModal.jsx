@@ -1,70 +1,49 @@
 import { useState, useEffect } from "react";
-import { X, AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
-import toast from "react-hot-toast";
+import { X, AlertTriangle, Shield } from "lucide-react";
 
 import useAuth from "../../hooks/useAuth";
 import useTheme from "../../hooks/useTheme";
-import OTPInput from "../auth/OTPInput";
 import Button from "../ui/Button";
+import Input from "../ui/Input";
 
-const DeleteAccountModal = ({ isOpen, onClose, userEmail }) => {
+const DeleteAccountModal = ({ isOpen, onClose }) => {
   const { c } = useTheme();
-  const { requestAccountDeletion, confirmAccountDeletion } = useAuth();
+  const { deleteAccount } = useAuth();
 
-  const [step, setStep] = useState("warning"); // 'warning' | 'verify'
-  const [otp, setOtp] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const [step, setStep] = useState("warning");
   const [typedConfirm, setTypedConfirm] = useState("");
+  const [securityAnswer, setSecurityAnswer] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!isOpen) {
       setStep("warning");
-      setOtp("");
       setTypedConfirm("");
+      setSecurityAnswer("");
+      setError(null);
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [resendCooldown]);
-
-  const handleRequestOTP = async () => {
-    setLoading(true);
-    const result = await requestAccountDeletion();
-    setLoading(false);
-    if (result.success) {
-      setStep("verify");
-      setResendCooldown(60);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendCooldown > 0 || loading) return;
-    setLoading(true);
-    const result = await requestAccountDeletion();
-    setLoading(false);
-    if (result.success) {
-      toast.success("New code sent! 📧");
-      setOtp("");
-      setResendCooldown(60);
-    }
-  };
+  const canProceed = typedConfirm.toUpperCase() === "DELETE";
 
   const handleConfirmDelete = async () => {
-    if (otp.length !== 6) {
-      toast.error("Enter the 6-digit code");
+    if (!securityAnswer.trim()) {
+      setError("Please enter your security answer");
       return;
     }
+
     setLoading(true);
-    await confirmAccountDeletion(otp);
+    setError(null);
+
+    const result = await deleteAccount(securityAnswer.trim());
+
+    if (!result.success) {
+      setError(result.message || "Incorrect security answer");
+    }
+
     setLoading(false);
   };
-
-  const canProceed = typedConfirm.toUpperCase() === "DELETE";
 
   if (!isOpen) return null;
 
@@ -95,6 +74,8 @@ const DeleteAccountModal = ({ isOpen, onClose, userEmail }) => {
           zIndex: 101,
           padding: "24px",
           fontFamily: "Inter, sans-serif",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
         {/* Header */}
@@ -196,10 +177,9 @@ const DeleteAccountModal = ({ isOpen, onClose, userEmail }) => {
               }}
             >
               <li>Your profile and personal information</li>
-              <li>All your posts (videos, images, text, links)</li>
+              <li>All your posts, images, and videos</li>
               <li>All your notices</li>
               <li>All your comments and likes</li>
-              <li>All uploaded media files</li>
             </ul>
 
             <div style={{ marginBottom: "20px" }}>
@@ -243,9 +223,8 @@ const DeleteAccountModal = ({ isOpen, onClose, userEmail }) => {
               </Button>
               <Button
                 variant="danger"
-                onClick={handleRequestOTP}
+                onClick={() => setStep("verify")}
                 fullWidth
-                isLoading={loading}
                 disabled={!canProceed}
               >
                 Continue
@@ -257,63 +236,98 @@ const DeleteAccountModal = ({ isOpen, onClose, userEmail }) => {
         {step === "verify" && (
           <>
             <div style={{ textAlign: "center", marginBottom: "20px" }}>
-              <p
+              <div
                 style={{
-                  fontSize: "14px",
-                  color: c.textTer,
+                  width: "56px",
+                  height: "56px",
+                  background: c.accentLight,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 14px",
+                }}
+              >
+                <Shield size={26} color={c.accent} />
+              </div>
+              <h3
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 700,
+                  color: c.text,
                   margin: "0 0 6px",
                 }}
               >
-                We've sent a confirmation code to
-              </p>
+                Verify your identity
+              </h3>
               <p
                 style={{
-                  fontSize: "14px",
-                  color: c.text,
+                  fontSize: "13px",
+                  color: c.textTer,
                   margin: 0,
-                  fontWeight: 700,
                 }}
               >
-                {userEmail}
+                Answer your security question to confirm deletion
               </p>
             </div>
 
-            <div style={{ marginBottom: "20px" }}>
-              <OTPInput value={otp} onChange={setOtp} length={6} autoFocus />
-            </div>
-
-            <Button
-              variant="danger"
-              onClick={handleConfirmDelete}
-              fullWidth
-              isLoading={loading}
-              disabled={otp.length !== 6}
-            >
-              Permanently Delete Account
-            </Button>
-
-            <div style={{ textAlign: "center", marginTop: "16px" }}>
-              <button
-                onClick={handleResend}
-                disabled={resendCooldown > 0 || loading}
+            {error && (
+              <div
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  background: "none",
-                  border: "none",
-                  color: resendCooldown > 0 ? c.textMuted : c.accent,
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  cursor: resendCooldown > 0 ? "not-allowed" : "pointer",
-                  fontFamily: "Inter, sans-serif",
+                  background: c.dangerLight,
+                  border: `1px solid ${c.danger}40`,
+                  borderLeft: `4px solid ${c.danger}`,
+                  borderRadius: "10px",
+                  padding: "12px 14px",
+                  marginBottom: "16px",
                 }}
               >
-                <RefreshCw size={13} />
-                {resendCooldown > 0
-                  ? `Resend in ${resendCooldown}s`
-                  : "Resend code"}
-              </button>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: c.danger,
+                    margin: 0,
+                    fontWeight: 600,
+                  }}
+                >
+                  {error}
+                </p>
+              </div>
+            )}
+
+            <div style={{ marginBottom: "20px" }}>
+              <Input
+                label="Security Answer"
+                type="text"
+                placeholder="Your answer (case-insensitive)"
+                icon={Shield}
+                value={securityAnswer}
+                onChange={(e) => {
+                  setSecurityAnswer(e.target.value);
+                  setError(null);
+                }}
+                error={null}
+                required
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Button
+                variant="secondary"
+                onClick={() => setStep("warning")}
+                fullWidth
+              >
+                Back
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmDelete}
+                fullWidth
+                isLoading={loading}
+                disabled={!securityAnswer.trim()}
+              >
+                Delete Forever
+              </Button>
             </div>
           </>
         )}

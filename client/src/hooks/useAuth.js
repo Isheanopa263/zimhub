@@ -9,38 +9,19 @@ const useAuth = () => {
   const { login, logout, user, isAuthenticated, isLoading, setLoading } =
     useAuthStore();
 
-  /* Step 1: Request OTP for registration */
-  const requestRegistrationOTP = useCallback(
+  // Register (instant — no OTP)
+  const register = useCallback(
     async (formData) => {
       setLoading(true);
       try {
-        await authApi.requestRegistrationOTP(formData);
-        toast.success("Verification code sent to your email! 📧");
-        return { success: true };
-      } catch (error) {
-        const message = error.response?.data?.message || "Failed to send code";
-        toast.error(message);
-        return { success: false, message };
-      } finally {
-        setLoading(false);
-      }
-    },
-    [setLoading],
-  );
-
-  /* Step 2: Verify OTP and create account */
-  const verifyAndRegister = useCallback(
-    async (formData) => {
-      setLoading(true);
-      try {
-        const response = await authApi.verifyRegistration(formData);
+        const response = await authApi.register(formData);
         const { user, accessToken, refreshToken } = response.data;
         login(user, accessToken, refreshToken);
         toast.success("Welcome to ZimHub! 🎉");
         navigate("/feed");
         return { success: true };
       } catch (error) {
-        const message = error.response?.data?.message || "Verification failed";
+        const message = error.response?.data?.message || "Registration failed";
         toast.error(message);
         return { success: false, message };
       } finally {
@@ -50,7 +31,7 @@ const useAuth = () => {
     [login, navigate, setLoading],
   );
 
-  /* Login (email or username) */
+  // Login
   const handleLogin = useCallback(
     async ({ identifier, password }) => {
       setLoading(true);
@@ -58,14 +39,10 @@ const useAuth = () => {
         const response = await authApi.login({ identifier, password });
         const { user, accessToken, refreshToken } = response.data;
         login(user, accessToken, refreshToken);
-        toast.success(`Welcome back, ${user.profile.full_name}! 👋`);
         navigate("/feed");
         return { success: true };
       } catch (error) {
-        const message = error.response?.data?.message || "Login failed";
-        toast.error(message);
-        console.log(message);
-        return { success: false, message };
+        return { success: false, message: error.response?.data?.message };
       } finally {
         setLoading(false);
       }
@@ -73,7 +50,7 @@ const useAuth = () => {
     [login, navigate, setLoading],
   );
 
-  /* Logout */
+  // Logout
   const handleLogout = useCallback(async () => {
     try {
       const refreshToken = localStorage.getItem("refreshToken");
@@ -86,19 +63,17 @@ const useAuth = () => {
     }
   }, [logout, navigate]);
 
-  /* Password reset — step 1 */
-  const requestPasswordReset = useCallback(async (email) => {
+  // Get security question
+  const getSecurityQuestion = useCallback(async (email) => {
     try {
-      await authApi.requestPasswordReset(email);
-      toast.success("If this email exists, a code has been sent 📧");
-      return { success: true };
+      const response = await authApi.getSecurityQuestion(email);
+      return { success: true, question: response.data.question };
     } catch (error) {
-      toast.error("Failed to send code");
-      return { success: false };
+      return { success: false, message: error.response?.data?.message };
     }
   }, []);
 
-  /* Password reset — step 2 */
+  // Reset password
   const resetPassword = useCallback(
     async (data) => {
       try {
@@ -115,24 +90,11 @@ const useAuth = () => {
     [navigate],
   );
 
-  /* Account deletion — step 1 */
-  const requestAccountDeletion = useCallback(async () => {
-    try {
-      await authApi.requestAccountDeletion();
-      toast.success("Confirmation code sent to your email ⚠️");
-      return { success: true };
-    } catch (error) {
-      const message = error.response?.data?.message || "Failed to send code";
-      toast.error(message);
-      return { success: false };
-    }
-  }, []);
-
-  /* Account deletion — step 2 */
-  const confirmAccountDeletion = useCallback(
-    async (otp) => {
+  // Delete account
+  const deleteAccount = useCallback(
+    async (securityAnswer) => {
       try {
-        await authApi.confirmAccountDeletion(otp);
+        await authApi.deleteAccount(securityAnswer);
         toast.success("Account deleted permanently");
         logout();
         navigate("/login");
@@ -150,14 +112,12 @@ const useAuth = () => {
     user,
     isAuthenticated,
     isLoading,
-    requestRegistrationOTP,
-    verifyAndRegister,
+    register,
     login: handleLogin,
     logout: handleLogout,
-    requestPasswordReset,
+    getSecurityQuestion,
     resetPassword,
-    requestAccountDeletion,
-    confirmAccountDeletion,
+    deleteAccount,
   };
 };
 

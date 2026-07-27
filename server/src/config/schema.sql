@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS users (
   is_verified     BOOLEAN NOT NULL DEFAULT false,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  security_question    VARCHAR(255),
+security_answer_hash TEXT,
 );
 
 -- ─── PROFILES ─────────────────────────────────────────────────────────────

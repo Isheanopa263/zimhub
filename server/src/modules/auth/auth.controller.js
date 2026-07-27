@@ -1,18 +1,9 @@
 const authService = require("./auth.service");
 const ApiResponse = require("../../utils/ApiResponse");
 
-const requestRegistrationOTP = async (req, res, next) => {
+const register = async (req, res, next) => {
   try {
-    const result = await authService.requestRegistrationOTP(req.body);
-    return ApiResponse.success(res, result.message, result);
-  } catch (error) {
-    next(error);
-  }
-};
-
-const verifyAndCreateAccount = async (req, res, next) => {
-  try {
-    const result = await authService.verifyAndCreateAccount(req.body);
+    const result = await authService.registerUser(req.body);
     return ApiResponse.created(res, "Account created successfully", result);
   } catch (error) {
     next(error);
@@ -79,10 +70,12 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-const requestPasswordReset = async (req, res, next) => {
+// ── Security Question Based ──
+
+const getSecurityQuestion = async (req, res, next) => {
   try {
-    const result = await authService.requestPasswordResetOTP(req.body.email);
-    return ApiResponse.success(res, result.message);
+    const result = await authService.getSecurityQuestion(req.body.email);
+    return ApiResponse.success(res, "Security question retrieved", result);
   } catch (error) {
     next(error);
   }
@@ -90,25 +83,19 @@ const requestPasswordReset = async (req, res, next) => {
 
 const resetPassword = async (req, res, next) => {
   try {
-    const result = await authService.resetPassword(req.body);
+    const result = await authService.resetPasswordWithSecurityAnswer(req.body);
     return ApiResponse.success(res, result.message);
   } catch (error) {
     next(error);
   }
 };
 
-const requestAccountDeletion = async (req, res, next) => {
+const deleteAccount = async (req, res, next) => {
   try {
-    const result = await authService.requestAccountDeletion(req.user.id);
-    return ApiResponse.success(res, result.message);
-  } catch (error) {
-    next(error);
-  }
-};
-
-const confirmAccountDeletion = async (req, res, next) => {
-  try {
-    await authService.confirmAccountDeletion(req.user.id, req.body.otp);
+    await authService.deleteAccountWithSecurityAnswer(
+      req.user.id,
+      req.body.securityAnswer,
+    );
     return ApiResponse.success(res, "Account deleted permanently");
   } catch (error) {
     next(error);
@@ -116,16 +103,14 @@ const confirmAccountDeletion = async (req, res, next) => {
 };
 
 module.exports = {
-  requestRegistrationOTP,
-  verifyAndCreateAccount,
+  register,
   login,
   refresh,
   logout,
   logoutAll,
   getMe,
   changePassword,
-  requestPasswordReset,
+  getSecurityQuestion,
   resetPassword,
-  requestAccountDeletion,
-  confirmAccountDeletion,
+  deleteAccount,
 };

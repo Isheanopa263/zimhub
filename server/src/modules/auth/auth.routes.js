@@ -1,125 +1,141 @@
 const express = require("express");
 const router = express.Router();
 
-const authController = require("./auth.controller");
+const controller = require("./auth.controller");
 const { authenticate } = require("../../middleware/auth");
-const validate = require("../../middleware/validate");
 const {
   authLimiter,
   refreshTokenLimiter,
 } = require("../../middleware/rateLimiter");
+const validate = require("../../middleware/validate");
+const { body } = require("express-validator");
 
-const {
-  registerValidator,
-  verifyRegistrationValidator,
-  loginValidator,
-  refreshTokenValidator,
-  changePasswordValidator,
-  requestOTPValidator,
-  resetPasswordValidator,
-  confirmDeletionValidator,
-} = require("./auth.validators");
+// ─── Validators ──
 
-// ─── Public ──────────────────────────────────────────────────────
+const registerValidator = [
+  body("fullName")
+    .trim()
+    .notEmpty()
+    .isLength({ min: 2, max: 100 })
+    .matches(/^[a-zA-Z\s'\-.]+$/),
+  body("username")
+    .trim()
+    .notEmpty()
+    .isLength({ min: 3, max: 30 })
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .toLowerCase(),
+  body("email").trim().notEmpty().isEmail().normalizeEmail(),
+  body("password")
+    .notEmpty()
+    .isLength({ min: 8 })
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
+  body("securityQuestion")
+    .trim()
+    .notEmpty()
+    .withMessage("Security question is required")
+    .isLength({ min: 5, max: 255 }),
+  body("securityAnswer")
+    .trim()
+    .notEmpty()
+    .withMessage("Security answer is required")
+    .isLength({ min: 2, max: 100 }),
+  body("bio").optional().trim().isLength({ max: 300 }),
+];
 
-// POST /auth/register/request — STEP 1: Send OTP
+const loginValidator = [
+  body("identifier").trim().notEmpty(),
+  body("password").notEmpty(),
+];
+
+const resetRequestValidator = [
+  body("email").trim().notEmpty().isEmail().normalizeEmail(),
+];
+
+const resetConfirmValidator = [
+  body("email").trim().notEmpty().isEmail().normalizeEmail(),
+  body("securityAnswer").trim().notEmpty(),
+  body("newPassword")
+    .notEmpty()
+    .isLength({ min: 8 })
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
+];
+
+const deleteAccountValidator = [
+  body("securityAnswer")
+    .trim()
+    .notEmpty()
+    .withMessage("Security answer is required"),
+];
+
+const changePasswordValidator = [
+  body("currentPassword").notEmpty(),
+  body("newPassword")
+    .notEmpty()
+    .isLength({ min: 8 })
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
+];
+
+const refreshValidator = [body("refreshToken").notEmpty()];
+
+// ─── Public Routes ──
+
 router.post(
-  "/register/request",
+  "/register",
   authLimiter,
   registerValidator,
   validate,
-  authController.requestRegistrationOTP,
+  controller.register,
 );
 
-// POST /auth/register/verify — STEP 2: Verify OTP + create
-router.post(
-  "/register/verify",
-  authLimiter,
-  verifyRegistrationValidator,
-  validate,
-  authController.verifyAndCreateAccount,
-);
+router.post("/login", authLimiter, loginValidator, validate, controller.login);
 
-// POST /auth/login (email or username)
-router.post(
-  "/login",
-  authLimiter,
-  loginValidator,
-  validate,
-  authController.login,
-);
-
-// POST /auth/refresh
 router.post(
   "/refresh",
-  refreshTokenValidator,
-  validate,
   refreshTokenLimiter,
-  authController.refresh,
+  refreshValidator,
+  validate,
+  controller.refresh,
 );
 
-// POST /auth/logout
-router.post("/logout", authController.logout);
+router.post("/logout", controller.logout);
 
-// Password reset (2-step OTP)
+// Password reset (security question)
 router.post(
-  "/password-reset/request",
+  "/password-reset/question",
   authLimiter,
-  requestOTPValidator,
+  resetRequestValidator,
   validate,
-  authController.requestPasswordReset,
+  controller.getSecurityQuestion,
 );
 
 router.post(
   "/password-reset/confirm",
   authLimiter,
-  resetPasswordValidator,
+  resetConfirmValidator,
   validate,
-  authController.resetPassword,
+  controller.resetPassword,
 );
 
-// ─── Protected ────────────────────────────────────────────────────
+// ─── Protected Routes ──
 
-router.get("/me", authenticate, authController.getMe);
+router.get("/me", authenticate, controller.getMe);
 
-router.post("/logout-all", authenticate, authController.logoutAll);
+router.post("/logout-all", authenticate, controller.logoutAll);
 
 router.patch(
   "/change-password",
   authenticate,
   changePasswordValidator,
   validate,
-  authController.changePassword,
-);
-
-// Account deletion (2-step OTP)
-router.post(
-  "/delete-account/request",
-  authenticate,
-  authController.requestAccountDeletion,
+  controller.changePassword,
 );
 
 router.delete(
-  "/delete-account/confirm",
+  "/delete-account",
   authenticate,
-  confirmDeletionValidator,
+  deleteAccountValidator,
   validate,
-  authController.confirmAccountDeletion,
+  controller.deleteAccount,
 );
-
-// ─── DEV ONLY: Test email config ──────────────────────────────────
-if (process.env.NODE_ENV === "development") {
-  router.post("/test-email", async (req, res) => {
-    const { testEmailConfig } = require("../../utils/email");
-    const { email } = req.body;
-    if (!email) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email required" });
-    }
-    const result = await testEmailConfig(email);
-    res.json(result);
-  });
-}
 
 module.exports = router;

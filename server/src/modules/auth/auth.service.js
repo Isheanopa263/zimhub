@@ -33,99 +33,70 @@ const storeRefreshToken = async (userId, refreshToken) => {
 /* ─── REGISTRATION FLOW (now 2 steps) ──────────────────────────────────────── */
 
 /**
- * STEP 1: Request OTP for registration
- * Validates email+username availability before sending OTP
+ * Register a new user (no OTP — uses security question)
  */
-const requestRegistrationOTP = async ({
+const registerUser = async ({
   fullName,
   username,
   email,
   password,
   bio,
+  securityQuestion,
+  securityAnswer,
 }) => {
-  const normalizedEmail = email.toLowerCase().trim();
-  const normalizedUsername = username.toLowerCase().trim();
-
-  // Check email availability (case-insensitive)
-  const emailCheck = await query(
-    "SELECT id FROM users WHERE LOWER(email) = LOWER($1)",
-    [normalizedEmail],
-  );
-  if (emailCheck.rows.length > 0) {
-    throw ApiError.conflict("An account with this email already exists");
+  if (!securityQuestion?.trim() || !securityAnswer?.trim()) {
+    throw ApiError.badRequest("Security question and answer are required");
   }
 
-  // Check username availability (case-insensitive)
-  const usernameCheck = await query(
-    "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
-    [normalizedUsername],
-  );
-  if (usernameCheck.rows.length > 0) {
-    throw ApiError.conflict("This username is already taken");
+  if (securityAnswer.trim().length < 2) {
+    throw ApiError.badRequest("Security answer must be at least 2 characters");
   }
 
-  // Send OTP
-  const firstName = fullName?.trim().split(" ")[0] || "there";
-  await otpService.createAndSendOTP(normalizedEmail, "register", firstName);
-
-  return {
-    email: normalizedEmail,
-    message: "Verification code sent to your email",
-  };
-};
-
-/**
- * STEP 2: Verify OTP & create account
- */
-const verifyAndCreateAccount = async ({
-  fullName,
-  username,
-  email,
-  password,
-  bio,
-  otp,
-}) => {
   const normalizedEmail = email.toLowerCase().trim();
   const normalizedUsername = username.toLowerCase().trim();
-
-  // Verify OTP
-  const { otpId } = await otpService.verifyOTP(
-    normalizedEmail,
-    otp,
-    "register",
-  );
 
   const client = await getClient();
 
   try {
     await client.query("BEGIN");
 
-    // Double-check availability (in case someone registered while user was verifying)
+    // Check email
     const emailCheck = await client.query(
-      "SELECT id FROM users WHERE email = $1",
+      "SELECT id FROM users WHERE LOWER(email) = LOWER($1)",
       [normalizedEmail],
     );
     if (emailCheck.rows.length > 0) {
       throw ApiError.conflict("An account with this email already exists");
     }
 
+    // Check username
     const usernameCheck = await client.query(
-      "SELECT id FROM users WHERE username = $1",
+      "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
       [normalizedUsername],
     );
     if (usernameCheck.rows.length > 0) {
       throw ApiError.conflict("This username is already taken");
     }
 
-    // Hash password
+    // Hash password and security answer
     const passwordHash = await bcrypt.hash(password, 12);
+    const securityAnswerHash = await bcrypt.hash(
+      securityAnswer.trim().toLowerCase(), // Normalize: case-insensitive
+      10,
+    );
 
-    // Create user (verified since OTP confirmed)
+    // Create user
     const userResult = await client.query(
-      `INSERT INTO users (username, email, password_hash, role, is_verified)
-       VALUES ($1, $2, $3, 'student', true)
+      `INSERT INTO users (username, email, password_hash, role, is_verified, security_question, security_answer_hash)
+       VALUES ($1, $2, $3, 'student', true, $4, $5)
        RETURNING id, username, email, role, is_verified, created_at`,
-      [normalizedUsername, normalizedEmail, passwordHash],
+      [
+        normalizedUsername,
+        normalizedEmail,
+        passwordHash,
+        securityQuestion.trim(),
+        securityAnswerHash,
+      ],
     );
 
     const user = userResult.rows[0];
@@ -139,9 +110,6 @@ const verifyAndCreateAccount = async ({
     );
 
     await client.query("COMMIT");
-
-    // Consume OTP
-    await otpService.consumeOTP(otpId);
 
     // Generate tokens
     const accessToken = generateAccessToken(user.id, user.role);
@@ -159,6 +127,139 @@ const verifyAndCreateAccount = async ({
   } finally {
     client.release();
   }
+};
+
+/**
+ * Password Reset — Step 1: Verify security question
+ * Returns the question for the given email
+ */
+const getSecurityQuestion = async (email) => {
+  const normalizedEmail = email.toLowerCase().trim();
+
+  const result = await query(
+    `SELECT security_question FROM users WHERE LOWER(email) = LOWER($1)`,
+    [normalizedEmail],
+  );
+
+  // Always return something (prevent user enumeration)
+  if (result.rows.length === 0) {
+    // Return a fake question so attacker can't tell if email exists
+    return { question: "What is your favorite color?" };
+  }
+
+  return { question: result.rows[0].security_question };
+};
+
+/**
+ * Password Reset — Step 2: Verify answer and reset password
+ */
+const resetPasswordWithSecurityAnswer = async ({
+  email,
+  securityAnswer,
+  newPassword,
+}) => {
+  const normalizedEmail = email.toLowerCase().trim();
+
+  if (!newPassword || newPassword.length < 8) {
+    throw ApiError.badRequest("Password must be at least 8 characters");
+  }
+
+  if (!securityAnswer?.trim()) {
+    throw ApiError.badRequest("Security answer is required");
+  }
+
+  // Get user
+  const userResult = await query(
+    "SELECT id, security_answer_hash FROM users WHERE LOWER(email) = LOWER($1)",
+    [normalizedEmail],
+  );
+
+  if (userResult.rows.length === 0) {
+    // Same error as wrong answer (prevent enumeration)
+    throw ApiError.badRequest("Incorrect security answer");
+  }
+
+  const user = userResult.rows[0];
+
+  // Verify security answer (case-insensitive)
+  const isValid = await bcrypt.compare(
+    securityAnswer.trim().toLowerCase(),
+    user.security_answer_hash,
+  );
+
+  if (!isValid) {
+    throw ApiError.badRequest("Incorrect security answer");
+  }
+
+  // Hash new password
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+
+  await query("UPDATE users SET password_hash = $1 WHERE id = $2", [
+    passwordHash,
+    user.id,
+  ]);
+
+  // Invalidate all sessions
+  await query("DELETE FROM user_sessions WHERE user_id = $1", [user.id]);
+
+  return { message: "Password reset successfully. Please login." };
+};
+
+/**
+ * Account Deletion — Verify security answer and delete
+ */
+const deleteAccountWithSecurityAnswer = async (userId, securityAnswer) => {
+  const userResult = await query(
+    `SELECT u.email, u.role, u.security_answer_hash, p.avatar_url
+     FROM users u
+     LEFT JOIN profiles p ON p.user_id = u.id
+     WHERE u.id = $1`,
+    [userId],
+  );
+
+  if (userResult.rows.length === 0) {
+    throw ApiError.notFound("User not found");
+  }
+
+  if (userResult.rows[0].role === "admin") {
+    throw ApiError.forbidden("Admin accounts cannot be self-deleted");
+  }
+
+  // Verify security answer
+  const isValid = await bcrypt.compare(
+    securityAnswer.trim().toLowerCase(),
+    userResult.rows[0].security_answer_hash,
+  );
+
+  if (!isValid) {
+    throw ApiError.badRequest("Incorrect security answer");
+  }
+
+  const { avatar_url } = userResult.rows[0];
+
+  // Get media files to delete
+  const mediaResult = await query(
+    `SELECT
+      (SELECT array_agg(image_url) FROM post_images pi
+       JOIN posts p ON p.id = pi.post_id WHERE p.user_id = $1) AS images,
+      (SELECT array_agg(video_url) FROM post_videos pv
+       JOIN posts p ON p.id = pv.post_id WHERE p.user_id = $1) AS videos,
+      (SELECT array_agg(poster_url) FROM notices WHERE user_id = $1) AS posters`,
+    [userId],
+  );
+
+  const media = mediaResult.rows[0];
+
+  // Delete files
+  if (avatar_url) deleteFile(avatar_url, "avatars");
+  (media.images || []).forEach((f) => f && deleteFile(f, "images"));
+  (media.videos || []).forEach((f) => f && deleteFile(f, "videos"));
+  (media.posters || []).forEach((f) => f && deleteFile(f, "notices"));
+
+  // Delete user
+  await query("DELETE FROM users WHERE id = $1", [userId]);
+
+  return { deleted: true };
 };
 
 /* ─── LOGIN (now supports email OR username) ──────────────────────────────── */

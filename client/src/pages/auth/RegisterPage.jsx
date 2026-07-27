@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,53 +11,58 @@ import {
   FileText,
   ArrowRight,
   ArrowLeft,
-  RefreshCw,
+  Shield,
 } from "lucide-react";
 
 import useAuth from "../../hooks/useAuth";
 import useAuthStore from "../../store/authStore";
 import useTheme from "../../hooks/useTheme";
-import { authApi } from "../../api/endpoints/auth.api";
 
 import Logo from "../../components/ui/Logo";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
-import OTPInput from "../../components/auth/OTPInput";
+import ThemeToggleButton from "../../components/ui/ThemeToggleButton";
 
-import toast from "react-hot-toast";
+const SECURITY_QUESTIONS = [
+  "What is the name of your first pet?",
+  "What city were you born in?",
+  "What is your mother's maiden name?",
+  "What was the name of your first school?",
+  "What is your favorite movie?",
+  "What is your favorite food?",
+  "What was your childhood nickname?",
+  "What is the name of your best friend?",
+  "What is your favorite sport?",
+  "What street did you grow up on?",
+];
 
 const registerSchema = z
   .object({
     fullName: z
       .string()
-      .min(2, "Full name must be at least 2 characters")
+      .min(2)
       .max(100)
-      .regex(
-        /^[a-zA-Z\s'\-.]+$/,
-        "Full name can only contain letters, spaces, hyphens, apostrophes and periods",
-      ),
+      .regex(/^[a-zA-Z\s'\-.]+$/, "Only letters, spaces, hyphens, periods"),
     username: z
       .string()
       .min(3)
       .max(30)
       .regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers and underscores"),
-    email: z
-      .string()
-      .min(1, "Email is required")
-      .email("Please enter a valid email"),
+    email: z.string().min(1, "Email is required").email("Invalid email"),
     password: z
       .string()
-      .min(8, "Password must be at least 8 characters")
+      .min(8)
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
         "Must contain uppercase, lowercase and number",
       ),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-    bio: z
+    confirmPassword: z.string().min(1, "Please confirm password"),
+    securityQuestion: z.string().min(1, "Select a security question"),
+    securityAnswer: z
       .string()
-      .max(300, "Bio cannot exceed 300 characters")
-      .optional()
-      .or(z.literal("")),
+      .min(2, "Answer must be at least 2 characters")
+      .max(100),
+    bio: z.string().max(300).optional().or(z.literal("")),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -72,7 +77,7 @@ const PasswordStrength = ({ password, c }) => {
     { met: /[a-z]/.test(password) },
     { met: /\d/.test(password) },
   ];
-  const strength = checks.filter((c) => c.met).length;
+  const strength = checks.filter((x) => x.met).length;
   const colors = ["#f87171", "#fb923c", "#facc15", "#4ade80"];
   const labels = ["Weak", "Fair", "Good", "Strong"];
 
@@ -111,15 +116,8 @@ const PasswordStrength = ({ password, c }) => {
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
-  const { requestRegistrationOTP, verifyAndRegister, isLoading } = useAuth();
+  const { register: registerUser, isLoading } = useAuth();
   const { c, isDark } = useTheme();
-
-  /* 2-step flow */
-  const [step, setStep] = useState("form"); // 'form' | 'verify'
-  const [otp, setOtp] = useState("");
-  const [resending, setResending] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [formData, setFormData] = useState(null);
 
   const {
     register,
@@ -134,6 +132,8 @@ const RegisterPage = () => {
       email: "",
       password: "",
       confirmPassword: "",
+      securityQuestion: "",
+      securityAnswer: "",
       bio: "",
     },
   });
@@ -144,45 +144,22 @@ const RegisterPage = () => {
     if (isAuthenticated) navigate("/feed", { replace: true });
   }, [isAuthenticated, navigate]);
 
-  /* Resend cooldown timer */
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [resendCooldown]);
-
   const onSubmit = async (data) => {
-    const { confirmPassword, ...payload } = data;
-    const result = await requestRegistrationOTP(payload);
-    if (result.success) {
-      setFormData(payload);
-      setStep("verify");
-      setResendCooldown(60);
-    }
+    const { confirmPassword, ...formData } = data;
+    await registerUser(formData);
   };
 
-  const handleVerify = async () => {
-    if (otp.length !== 6) {
-      toast.error("Please enter the 6-digit code");
-      return;
-    }
-    await verifyAndRegister({ ...formData, otp });
-  };
-
-  const handleResend = async () => {
-    if (resendCooldown > 0 || resending) return;
-    setResending(true);
-    try {
-      await authApi.requestRegistrationOTP(formData);
-      toast.success("New code sent! 📧");
-      setOtp("");
-      setResendCooldown(60);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to resend");
-    } finally {
-      setResending(false);
-    }
+  const inputStyle = {
+    width: "100%",
+    padding: "12px 14px",
+    borderRadius: "12px",
+    border: `2px solid ${c.borderStrong}`,
+    background: c.bgInput,
+    color: c.text,
+    fontSize: "14px",
+    fontFamily: "Inter, sans-serif",
+    outline: "none",
+    transition: "all 0.15s ease",
   };
 
   return (
@@ -201,7 +178,8 @@ const RegisterPage = () => {
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
-      {/* Blobs */}
+      <ThemeToggleButton position="top-right" />
+
       <div
         style={{
           position: "absolute",
@@ -237,11 +215,8 @@ const RegisterPage = () => {
           zIndex: 1,
         }}
       >
-        {/* Back link */}
-        <button
-          onClick={() =>
-            step === "verify" ? setStep("form") : navigate("/login")
-          }
+        <Link
+          to="/login"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -249,16 +224,11 @@ const RegisterPage = () => {
             color: "rgba(255,255,255,0.5)",
             fontSize: "14px",
             marginBottom: "16px",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
+            textDecoration: "none",
           }}
-          onMouseEnter={(e) => (e.target.style.color = "#ffffff")}
-          onMouseLeave={(e) => (e.target.style.color = "rgba(255,255,255,0.5)")}
         >
-          <ArrowLeft size={16} />
-          {step === "verify" ? "Back to form" : "Back to login"}
-        </button>
+          <ArrowLeft size={16} /> Back to login
+        </Link>
 
         <div
           style={{
@@ -267,353 +237,268 @@ const RegisterPage = () => {
             padding: "36px 32px",
             boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
             border: `1px solid ${c.border}`,
+            maxHeight: "85vh",
+            overflowY: "auto",
           }}
         >
-          {step === "form" ? (
-            <>
-              <div style={{ marginBottom: "24px" }}>
-                <Logo size="sm" />
+          <div style={{ marginBottom: "24px" }}>
+            <Logo size="sm" />
+          </div>
+
+          <div style={{ marginBottom: "24px" }}>
+            <h1
+              style={{
+                fontSize: "26px",
+                fontWeight: 800,
+                color: c.text,
+                margin: 0,
+              }}
+            >
+              Join ZimHub 🎓
+            </h1>
+            <p style={{ color: c.textTer, fontSize: "14px", marginTop: "6px" }}>
+              Create your student account
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <Input
+                label="Full Name"
+                name="fullName"
+                type="text"
+                placeholder="John Doe"
+                icon={User}
+                error={errors.fullName?.message}
+                helperText="Can be a display name — ghost accounts allowed"
+                required
+                {...register("fullName")}
+              />
+
+              <Input
+                label="Username"
+                name="username"
+                type="text"
+                placeholder="user1"
+                icon={AtSign}
+                error={errors.username?.message}
+                helperText="Can be a pseudonym"
+                required
+                {...register("username")}
+              />
+
+              <Input
+                label="Email Address"
+                name="email"
+                type="email"
+                placeholder="user@gmail.com"
+                icon={Mail}
+                error={errors.email?.message}
+                helperText="Must be valid — only admins can see it"
+                required
+                {...register("email")}
+              />
+
+              <div>
+                <Input
+                  label="Password"
+                  name="password"
+                  type="password"
+                  placeholder="Min 8 chars, A-Z, a-z, 0-9"
+                  icon={Lock}
+                  error={errors.password?.message}
+                  required
+                  {...register("password")}
+                />
+                <PasswordStrength password={watchedPassword} c={c} />
               </div>
 
-              <div style={{ marginBottom: "24px" }}>
-                <h1
+              <Input
+                label="Confirm Password"
+                name="confirmPassword"
+                type="password"
+                placeholder="Re-enter password"
+                icon={Lock}
+                error={errors.confirmPassword?.message}
+                required
+                {...register("confirmPassword")}
+              />
+
+              {/* Security Question */}
+              <div>
+                <label
                   style={{
-                    fontSize: "26px",
-                    fontWeight: 800,
+                    display: "block",
+                    fontSize: "13px",
+                    fontWeight: 600,
                     color: c.text,
-                    margin: 0,
+                    marginBottom: "6px",
                   }}
                 >
-                  Join ZimHub 🎓
-                </h1>
-                <p
-                  style={{
-                    color: c.textTer,
-                    fontSize: "14px",
-                    marginTop: "6px",
-                  }}
-                >
-                  Create your student account
-                </p>
-              </div>
-
-              <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "16px",
-                  }}
-                >
-                  <Input
-                    label="Full Name"
-                    name="fullName"
-                    type="text"
-                    placeholder="User Name"
-                    icon={User}
-                    error={errors.fullName?.message}
-                    required
-                    {...register("fullName")}
-                  />
-                  <Input
-                    label="Username"
-                    name="username"
-                    type="text"
-                    placeholder="username123"
-                    icon={AtSign}
-                    error={errors.username?.message}
-                    helperText="Letters, numbers and underscores only"
-                    required
-                    {...register("username")}
-                  />
-                  <Input
-                    label="Email Address"
-                    name="email"
-                    type="email"
-                    placeholder="user@gmail.com"
-                    icon={Mail}
-                    error={errors.email?.message}
-                    required
-                    {...register("email")}
-                  />
-
-                  <div>
-                    <Input
-                      label="Password"
-                      name="password"
-                      type="password"
-                      placeholder="Create a strong password"
-                      icon={Lock}
-                      error={errors.password?.message}
-                      required
-                      {...register("password")}
-                    />
-                    <PasswordStrength password={watchedPassword} c={c} />
-                  </div>
-
-                  <Input
-                    label="Confirm Password"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="Repeat your password"
-                    icon={Lock}
-                    error={errors.confirmPassword?.message}
-                    required
-                    {...register("confirmPassword")}
-                  />
-
-                  {/* Bio */}
-                  <div>
-                    <label
-                      htmlFor="bio"
-                      style={{
-                        display: "block",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        color: c.text,
-                        marginBottom: "6px",
-                      }}
-                    >
-                      Bio{" "}
-                      <span style={{ color: c.textMuted, fontWeight: 400 }}>
-                        (optional)
-                      </span>
-                    </label>
-                    <div style={{ position: "relative" }}>
-                      <FileText
-                        size={16}
-                        style={{
-                          position: "absolute",
-                          left: "14px",
-                          top: "14px",
-                          color: c.textMuted,
-                          pointerEvents: "none",
-                        }}
-                      />
-                      <textarea
-                        id="bio"
-                        placeholder="Tell the community about yourself..."
-                        rows={3}
-                        style={{
-                          width: "100%",
-                          paddingLeft: "42px",
-                          paddingRight: "16px",
-                          paddingTop: "12px",
-                          paddingBottom: "12px",
-                          borderRadius: "12px",
-                          border: `2px solid ${errors.bio ? c.danger : c.borderStrong}`,
-                          background: errors.bio ? c.dangerLight : c.bgInput,
-                          color: c.text,
-                          fontSize: "14px",
-                          fontFamily: "Inter, system-ui, sans-serif",
-                          resize: "none",
-                          outline: "none",
-                          transition: "all 0.15s ease",
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = c.accent;
-                          e.target.style.boxShadow = `0 0 0 3px ${c.accent}20`;
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = c.borderStrong;
-                          e.target.style.boxShadow = "none";
-                        }}
-                        {...register("bio")}
-                      />
-                    </div>
-                    {errors.bio && (
-                      <p
-                        style={{
-                          fontSize: "12px",
-                          color: c.danger,
-                          marginTop: "6px",
-                        }}
-                      >
-                        {errors.bio.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: "24px" }}>
-                  <Button
-                    type="submit"
-                    fullWidth
-                    isLoading={isLoading}
-                    size="lg"
-                  >
-                    Continue
-                    {!isLoading && <ArrowRight size={16} />}
-                  </Button>
-                </div>
-
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: c.textMuted,
-                    textAlign: "center",
-                    marginTop: "12px",
-                    lineHeight: 1.5,
-                    fontFamily: "Inter, sans-serif",
-                  }}
-                >
-                  By creating an account, you agree to our{" "}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      window.open(
-                        `${import.meta.env.BASE_URL || "/"}privacy`,
-                        "_blank",
-                      )
-                    }
+                  <span
                     style={{
-                      background: "none",
-                      border: "none",
-                      color: c.accent,
-                      fontWeight: 700,
-                      textDecoration: "underline",
-                      textUnderlineOffset: "2px",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      fontFamily: "inherit",
-                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
                     }}
                   >
-                    Privacy Policy
-                  </button>
-                  .
-                </p>
-              </form>
+                    <Shield size={13} color={c.textTer} />
+                    Security Question <span style={{ color: c.danger }}>*</span>
+                  </span>
+                </label>
+                <select
+                  {...register("securityQuestion")}
+                  style={{
+                    ...inputStyle,
+                    appearance: "auto",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="">Select a question...</option>
+                  {SECURITY_QUESTIONS.map((q, i) => (
+                    <option key={i} value={q}>
+                      {q}
+                    </option>
+                  ))}
+                </select>
+                {errors.securityQuestion && (
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: c.danger,
+                      marginTop: "6px",
+                    }}
+                  >
+                    {errors.securityQuestion.message}
+                  </p>
+                )}
+              </div>
 
-              <p
+              {/* Security Answer */}
+              <Input
+                label="Security Answer"
+                name="securityAnswer"
+                type="text"
+                placeholder="Your answer (case-insensitive)"
+                icon={Shield}
+                error={errors.securityAnswer?.message}
+                helperText="Used for password reset & account recovery"
+                required
+                {...register("securityAnswer")}
+              />
+
+              {/* Bio */}
+              <div>
+                <label
+                  htmlFor="bio"
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: c.text,
+                    marginBottom: "6px",
+                  }}
+                >
+                  Bio{" "}
+                  <span style={{ color: c.textMuted, fontWeight: 400 }}>
+                    (optional)
+                  </span>
+                </label>
+                <div style={{ position: "relative" }}>
+                  <FileText
+                    size={16}
+                    style={{
+                      position: "absolute",
+                      left: "14px",
+                      top: "14px",
+                      color: c.textMuted,
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <textarea
+                    id="bio"
+                    placeholder="Write a short bio..."
+                    rows={3}
+                    style={{
+                      ...inputStyle,
+                      paddingLeft: "42px",
+                      resize: "none",
+                    }}
+                    {...register("bio")}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "24px" }}>
+              <Button type="submit" fullWidth isLoading={isLoading} size="lg">
+                Create Account
+                {!isLoading && <ArrowRight size={16} />}
+              </Button>
+            </div>
+
+            <p
+              style={{
+                fontSize: "12px",
+                color: c.textMuted,
+                textAlign: "center",
+                marginTop: "12px",
+                lineHeight: 1.5,
+              }}
+            >
+              By creating an account, you agree to our{" "}
+              <button
+                type="button"
+                onClick={() =>
+                  window.open(
+                    `${import.meta.env.BASE_URL || "/"}privacy`,
+                    "_blank",
+                  )
+                }
                 style={{
-                  textAlign: "center",
-                  fontSize: "14px",
-                  color: c.textTer,
-                  marginTop: "24px",
+                  background: "none",
+                  border: "none",
+                  color: c.accent,
+                  fontWeight: 700,
+                  textDecoration: "underline",
+                  textUnderlineOffset: "2px",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontFamily: "inherit",
+                  padding: 0,
                 }}
               >
-                Already have an account?{" "}
-                <Link
-                  to="/login"
-                  style={{
-                    color: c.accent,
-                    fontWeight: 600,
-                    textDecoration: "none",
-                  }}
-                >
-                  Sign in
-                </Link>
-              </p>
-            </>
-          ) : (
-            /* ── OTP VERIFICATION STEP ── */
-            <>
-              <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                <div
-                  style={{
-                    width: "64px",
-                    height: "64px",
-                    background: c.accentLight,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 16px",
-                  }}
-                >
-                  <Mail size={28} color={c.accent} />
-                </div>
-                <h1
-                  style={{
-                    fontSize: "22px",
-                    fontWeight: 800,
-                    color: c.text,
-                    margin: "0 0 8px",
-                  }}
-                >
-                  Check your email 📬
-                </h1>
-                <p style={{ fontSize: "14px", color: c.textTer, margin: 0 }}>
-                  We've sent a 6-digit code to
-                </p>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    color: c.text,
-                    margin: "4px 0 0",
-                    fontWeight: 700,
-                  }}
-                >
-                  {formData?.email}
-                </p>
-                <br />
-                <p style={{ fontSize: "14px", color: c.textTer, margin: 0 }}>
-                  If you cannot see the email, check your spam folder
-                </p>
-              </div>
+                Privacy Policy
+              </button>
+              .
+              <br />
+              Ghost accounts allowed. Valid email required. Only admins see your
+              email.
+            </p>
+          </form>
 
-              <div style={{ marginBottom: "20px" }}>
-                <OTPInput value={otp} onChange={setOtp} length={6} autoFocus />
-              </div>
-
-              <Button
-                onClick={handleVerify}
-                fullWidth
-                size="lg"
-                isLoading={isLoading}
-                disabled={otp.length !== 6}
-              >
-                Verify & Create Account
-              </Button>
-
-              <div style={{ textAlign: "center", marginTop: "20px" }}>
-                <p
-                  style={{
-                    fontSize: "13px",
-                    color: c.textTer,
-                    margin: "0 0 8px",
-                  }}
-                >
-                  Didn't receive the code?
-                </p>
-                <button
-                  onClick={handleResend}
-                  disabled={resendCooldown > 0 || resending}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    background: "none",
-                    border: "none",
-                    color: resendCooldown > 0 ? c.textMuted : c.accent,
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    cursor: resendCooldown > 0 ? "not-allowed" : "pointer",
-                    fontFamily: "Inter, sans-serif",
-                  }}
-                >
-                  <RefreshCw
-                    size={13}
-                    style={{
-                      animation: resending
-                        ? "spin 0.8s linear infinite"
-                        : "none",
-                    }}
-                  />
-                  {resendCooldown > 0
-                    ? `Resend in ${resendCooldown}s`
-                    : "Resend code"}
-                </button>
-                <style>{`
-                  @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to   { transform: rotate(360deg); }
-                  }
-                `}</style>
-              </div>
-            </>
-          )}
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: "14px",
+              color: c.textTer,
+              marginTop: "24px",
+            }}
+          >
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              style={{
+                color: c.accent,
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Sign in
+            </Link>
+          </p>
         </div>
 
         <p
