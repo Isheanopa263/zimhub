@@ -284,7 +284,7 @@ const RegisterPage = () => {
                 placeholder="user1"
                 icon={AtSign}
                 error={errors.username?.message}
-                helperText="Can be a pseudonym"
+                helperText="Can be any name"
                 required
                 {...register("username")}
               />
@@ -296,7 +296,7 @@ const RegisterPage = () => {
                 placeholder="user@gmail.com"
                 icon={Mail}
                 error={errors.email?.message}
-                helperText="Must be valid — only admins can see it"
+                helperText="Must be valid used for account recovery"
                 required
                 {...register("email")}
               />
@@ -474,8 +474,7 @@ const RegisterPage = () => {
               </button>
               .
               <br />
-              Ghost accounts allowed. Valid email required. Only admins see your
-              email.
+              Ghost accounts allowed.
             </p>
           </form>
 
