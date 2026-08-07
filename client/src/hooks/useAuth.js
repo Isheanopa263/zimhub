@@ -9,7 +9,7 @@ const useAuth = () => {
   const { login, logout, user, isAuthenticated, isLoading, setLoading } =
     useAuthStore();
 
-  // Register (instant — no OTP)
+  // Register
   const register = useCallback(
     async (formData) => {
       setLoading(true);
@@ -42,7 +42,10 @@ const useAuth = () => {
         navigate("/feed");
         return { success: true };
       } catch (error) {
-        return { success: false, message: error.response?.data?.message };
+        return {
+          success: false,
+          message: error.response?.data?.message,
+        };
       } finally {
         setLoading(false);
       }
@@ -56,6 +59,7 @@ const useAuth = () => {
       const refreshToken = localStorage.getItem("refreshToken");
       await authApi.logout(refreshToken);
     } catch {
+      // Ignore errors — always logout locally
     } finally {
       logout();
       navigate("/login");
@@ -63,17 +67,20 @@ const useAuth = () => {
     }
   }, [logout, navigate]);
 
-  // Get security question
-  const getSecurityQuestion = useCallback(async (email) => {
+  // Get security question by username
+  const getSecurityQuestion = useCallback(async (username) => {
     try {
-      const response = await authApi.getSecurityQuestion(email);
+      const response = await authApi.getSecurityQuestion(username);
       return { success: true, question: response.data.question };
     } catch (error) {
-      return { success: false, message: error.response?.data?.message };
+      return {
+        success: false,
+        message: error.response?.data?.message || "Could not fetch question",
+      };
     }
   }, []);
 
-  // Reset password
+  // Reset password via security question
   const resetPassword = useCallback(
     async (data) => {
       try {

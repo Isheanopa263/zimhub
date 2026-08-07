@@ -3,15 +3,11 @@ const ApiError = require("../../utils/ApiError");
 const { getFileUrl, deleteFile, uploadFile } = require("../../utils/storage");
 const { getPaginationMeta } = require("../../utils/helpers");
 
-/**
- * Create a notice
- */
 const createNotice = async (userId, data, file = null) => {
   const { title, description, phoneNumber, whatsappNumber, emailAddress } =
     data;
 
   try {
-    // Upload poster to R2 if file exists
     let posterUrl = null;
     if (file?.filename) {
       posterUrl = await uploadFile(file.filename, "notices");
@@ -37,18 +33,14 @@ const createNotice = async (userId, data, file = null) => {
 
     return await getNoticeById(result.rows[0].id);
   } catch (error) {
-    // Clean up uploaded file on error
     if (file?.filename) deleteFile(file.filename, "notices");
     throw error;
   }
 };
 
-/**
- * Get a single notice by ID
- */
 const getNoticeById = async (noticeId) => {
   const result = await query(
-    `SELECT 
+    `SELECT
         n.id, n.title, n.description, n.poster_url,
         n.phone_number, n.whatsapp_number, n.email_address,
         n.status, n.created_at, n.updated_at,
@@ -68,9 +60,6 @@ const getNoticeById = async (noticeId) => {
   return formatNotice(result.rows[0]);
 };
 
-/**
- * Get all notices with search & filters
- */
 const getNotices = async ({
   page = 1,
   limit = 10,
@@ -83,13 +72,11 @@ const getNotices = async ({
   const params = [];
   const conditions = [];
 
-  // Status filter
   if (status && status !== "all") {
     params.push(status);
     conditions.push(`n.status = $${params.length}`);
   }
 
-  // Search filter (title and description)
   if (search && search.trim()) {
     params.push(`%${search.trim()}%`);
     conditions.push(
@@ -97,7 +84,6 @@ const getNotices = async ({
     );
   }
 
-  // "My notices" filter
   if (mine && userId) {
     params.push(userId);
     conditions.push(`n.user_id = $${params.length}`);
@@ -106,15 +92,15 @@ const getNotices = async ({
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  // Count
-  const countQuery = `SELECT COUNT(*) FROM notices n ${whereClause}`;
-  const countResult = await query(countQuery, params);
+  const countResult = await query(
+    `SELECT COUNT(*) FROM notices n ${whereClause}`,
+    params,
+  );
   const total = parseInt(countResult.rows[0].count);
 
-  // Data
   params.push(limit, offset);
-  const dataQuery = `
-    SELECT 
+  const result = await query(
+    `SELECT
         n.id, n.title, n.description, n.poster_url,
         n.phone_number, n.whatsapp_number, n.email_address,
         n.status, n.created_at, n.updated_at,
@@ -124,13 +110,12 @@ const getNotices = async ({
      JOIN users u ON u.id = n.user_id
      LEFT JOIN profiles p ON p.user_id = n.user_id
      ${whereClause}
-     ORDER BY 
+     ORDER BY
        CASE WHEN n.status = 'active' THEN 0 ELSE 1 END,
        n.created_at DESC
-     LIMIT $${params.length - 1} OFFSET $${params.length}
-  `;
-
-  const result = await query(dataQuery, params);
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params,
+  );
 
   return {
     notices: result.rows.map(formatNotice),
@@ -138,11 +123,7 @@ const getNotices = async ({
   };
 };
 
-/**
- * Update a notice
- */
 const updateNotice = async (noticeId, userId, data, file = null) => {
-  // Verify ownership
   const existing = await query(
     `SELECT user_id, poster_url FROM notices WHERE id = $1`,
     [noticeId],
@@ -156,7 +137,6 @@ const updateNotice = async (noticeId, userId, data, file = null) => {
     throw ApiError.forbidden("You can only edit your own notices");
   }
 
-  // Build dynamic UPDATE
   const updates = [];
   const params = [];
 
@@ -176,14 +156,10 @@ const updateNotice = async (noticeId, userId, data, file = null) => {
     }
   });
 
-  // Handle new poster
   if (file?.filename) {
-    // Delete old poster
     if (existing.rows[0].poster_url) {
       deleteFile(existing.rows[0].poster_url, "notices");
     }
-
-    // Upload new poster to R2
     const newPosterUrl = await uploadFile(file.filename, "notices");
     params.push(newPosterUrl);
     updates.push(`poster_url = $${params.length}`);
@@ -202,9 +178,6 @@ const updateNotice = async (noticeId, userId, data, file = null) => {
   return await getNoticeById(noticeId);
 };
 
-/**
- * Toggle status between active and closed
- */
 const toggleStatus = async (noticeId, userId) => {
   const result = await query(
     `SELECT user_id, status FROM notices WHERE id = $1`,
@@ -229,9 +202,6 @@ const toggleStatus = async (noticeId, userId) => {
   return await getNoticeById(noticeId);
 };
 
-/**
- * Delete a notice (hard delete)
- */
 const deleteNotice = async (noticeId, userId, isAdmin = false) => {
   const result = await query(
     `SELECT user_id, poster_url FROM notices WHERE id = $1`,
@@ -246,7 +216,6 @@ const deleteNotice = async (noticeId, userId, isAdmin = false) => {
     throw ApiError.forbidden("You can only delete your own notices");
   }
 
-  // Delete poster file
   if (result.rows[0].poster_url) {
     deleteFile(result.rows[0].poster_url, "notices");
   }
@@ -256,9 +225,6 @@ const deleteNotice = async (noticeId, userId, isAdmin = false) => {
   return { deleted: true };
 };
 
-/**
- * Format notice row for API response
- */
 const formatNotice = (row) => ({
   id: row.id,
   title: row.title,

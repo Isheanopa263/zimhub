@@ -2,9 +2,6 @@ const { query } = require("../../config/database");
 const { getFileUrl } = require("../../utils/storage");
 const { getPaginationMeta } = require("../../utils/helpers");
 
-/**
- * Search users by username or full name
- */
 const searchUsers = async (searchTerm, { page = 1, limit = 10 }) => {
   const offset = (page - 1) * limit;
   const pattern = `%${searchTerm.trim()}%`;
@@ -20,17 +17,18 @@ const searchUsers = async (searchTerm, { page = 1, limit = 10 }) => {
   const total = parseInt(countResult.rows[0].count);
 
   const result = await query(
-    `SELECT 
+    `SELECT
         u.id, u.username, u.role, u.created_at,
         p.full_name, p.bio, p.avatar_url,
-        COUNT(DISTINCT po.id) FILTER (WHERE po.is_deleted = false)::int AS post_count
+        COUNT(DISTINCT po.id)
+          FILTER (WHERE po.is_deleted = false)::int AS post_count
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
      LEFT JOIN posts po ON po.user_id = u.id
      WHERE (u.username ILIKE $1 OR p.full_name ILIKE $1)
        AND u.is_suspended = false
      GROUP BY u.id, p.full_name, p.bio, p.avatar_url
-     ORDER BY 
+     ORDER BY
        CASE WHEN u.username ILIKE $1 THEN 0 ELSE 1 END,
        p.full_name ASC
      LIMIT $2 OFFSET $3`,
@@ -52,9 +50,6 @@ const searchUsers = async (searchTerm, { page = 1, limit = 10 }) => {
   };
 };
 
-/**
- * Search posts by caption or text content
- */
 const searchPosts = async (
   searchTerm,
   currentUserId,
@@ -69,7 +64,7 @@ const searchPosts = async (
      LEFT JOIN post_links pl ON pl.post_id = p.id
      WHERE p.is_deleted = false
        AND (
-         p.caption ILIKE $1 
+         p.caption ILIKE $1
          OR pt.content ILIKE $1
          OR pl.title ILIKE $1
          OR pl.description ILIKE $1
@@ -80,13 +75,14 @@ const searchPosts = async (
   const total = parseInt(countResult.rows[0].count);
 
   const result = await query(
-    `SELECT 
-        p.id, p.user_id, p.post_type, p.caption, 
+    `SELECT
+        p.id, p.user_id, p.post_type, p.caption,
         p.created_at, p.updated_at,
         u.username,
         pr.full_name, pr.avatar_url,
         pi.image_url, pi.file_size AS image_file_size,
-        pv.video_url, pv.thumbnail_url, pv.duration, pv.file_size AS video_file_size,
+        pv.video_url, pv.thumbnail_url, pv.duration,
+        pv.file_size AS video_file_size,
         pt.content AS text_content, pt.background_style,
         pl.title AS link_title, pl.description AS link_description,
         pl.url AS link_url, pl.og_image AS link_og_image,
@@ -100,8 +96,15 @@ const searchPosts = async (
      LEFT JOIN post_videos pv ON pv.post_id = p.id
      LEFT JOIN post_text_posts pt ON pt.post_id = p.id
      LEFT JOIN post_links pl ON pl.post_id = p.id
-     LEFT JOIN (SELECT post_id, COUNT(*) AS like_count FROM likes GROUP BY post_id) lc ON lc.post_id = p.id
-     LEFT JOIN (SELECT post_id, COUNT(*) AS comment_count FROM comments WHERE is_deleted = false GROUP BY post_id) cc ON cc.post_id = p.id
+     LEFT JOIN (
+       SELECT post_id, COUNT(*) AS like_count
+       FROM likes GROUP BY post_id
+     ) lc ON lc.post_id = p.id
+     LEFT JOIN (
+       SELECT post_id, COUNT(*) AS comment_count
+       FROM comments WHERE is_deleted = false
+       GROUP BY post_id
+     ) cc ON cc.post_id = p.id
      LEFT JOIN likes ul ON ul.post_id = p.id AND ul.user_id = $2
      WHERE p.is_deleted = false
        AND (
@@ -121,9 +124,6 @@ const searchPosts = async (
   };
 };
 
-/**
- * Search notices by title or description
- */
 const searchNotices = async (searchTerm, { page = 1, limit = 10 }) => {
   const offset = (page - 1) * limit;
   const pattern = `%${searchTerm.trim()}%`;
@@ -136,8 +136,8 @@ const searchNotices = async (searchTerm, { page = 1, limit = 10 }) => {
   const total = parseInt(countResult.rows[0].count);
 
   const result = await query(
-    `SELECT 
-        n.id, n.title, n.description, n.poster_url, 
+    `SELECT
+        n.id, n.title, n.description, n.poster_url,
         n.phone_number, n.whatsapp_number, n.email_address,
         n.status, n.created_at,
         u.id AS user_id, u.username,
@@ -146,7 +146,7 @@ const searchNotices = async (searchTerm, { page = 1, limit = 10 }) => {
      JOIN users u ON u.id = n.user_id
      LEFT JOIN profiles p ON p.user_id = n.user_id
      WHERE n.title ILIKE $1 OR n.description ILIKE $1
-     ORDER BY 
+     ORDER BY
        CASE WHEN n.status = 'active' THEN 0 ELSE 1 END,
        n.created_at DESC
      LIMIT $2 OFFSET $3`,
@@ -177,9 +177,6 @@ const searchNotices = async (searchTerm, { page = 1, limit = 10 }) => {
   };
 };
 
-/**
- * Global search — search all types and return top results
- */
 const globalSearch = async (searchTerm, currentUserId, limit = 5) => {
   const [users, posts, notices] = await Promise.all([
     searchUsers(searchTerm, { page: 1, limit }),
@@ -199,9 +196,6 @@ const globalSearch = async (searchTerm, currentUserId, limit = 5) => {
   };
 };
 
-/**
- * Format post for search results
- */
 const formatSearchPost = (row) => {
   const post = {
     id: row.id,

@@ -28,18 +28,16 @@ const storeRefreshToken = async (userId, refreshToken) => {
   );
 };
 
-/* ─── REGISTRATION (Single Step — No OTP) ───────────────────────────────── */
+/* ─── REGISTRATION ───────────────────────────────────────────────────────── */
 
 const registerUser = async ({
   fullName,
   username,
-  email,
   password,
   bio,
   securityQuestion,
   securityAnswer,
 }) => {
-  // Validate security question fields
   if (!securityQuestion?.trim() || !securityAnswer?.trim()) {
     throw ApiError.badRequest("Security question and answer are required");
   }
@@ -47,22 +45,11 @@ const registerUser = async ({
     throw ApiError.badRequest("Security answer must be at least 2 characters");
   }
 
-  const normalizedEmail = email.toLowerCase().trim();
   const normalizedUsername = username.toLowerCase().trim();
-
   const client = await getClient();
 
   try {
     await client.query("BEGIN");
-
-    // Check email availability
-    const emailCheck = await client.query(
-      "SELECT id FROM users WHERE LOWER(email) = LOWER($1)",
-      [normalizedEmail],
-    );
-    if (emailCheck.rows.length > 0) {
-      throw ApiError.conflict("An account with this email already exists");
-    }
 
     // Check username availability
     const usernameCheck = await client.query(
@@ -73,23 +60,20 @@ const registerUser = async ({
       throw ApiError.conflict("This username is already taken");
     }
 
-    // Hash password & security answer
     const passwordHash = await bcrypt.hash(password, 12);
     const securityAnswerHash = await bcrypt.hash(
-      securityAnswer.trim().toLowerCase(), // normalize for case-insensitive comparison
+      securityAnswer.trim().toLowerCase(),
       10,
     );
 
-    // Create user — is_verified = true (no email step needed)
     const userResult = await client.query(
-      `INSERT INTO users 
-         (username, email, password_hash, role, is_verified, 
+      `INSERT INTO users
+         (username, password_hash, role,
           security_question, security_answer_hash)
-       VALUES ($1, $2, $3, 'student', true, $4, $5)
-       RETURNING id, username, email, role, is_verified, created_at`,
+       VALUES ($1, $2, 'student', $3, $4)
+       RETURNING id, username, role, created_at`,
       [
         normalizedUsername,
-        normalizedEmail,
         passwordHash,
         securityQuestion.trim(),
         securityAnswerHash,
@@ -98,7 +82,6 @@ const registerUser = async ({
 
     const user = userResult.rows[0];
 
-    // Create profile
     const profileResult = await client.query(
       `INSERT INTO profiles (user_id, full_name, bio)
        VALUES ($1, $2, $3)
@@ -108,7 +91,6 @@ const registerUser = async ({
 
     await client.query("COMMIT");
 
-    // Generate tokens immediately (user is verified on registration)
     const accessToken = generateAccessToken(user.id, user.role);
     const refreshToken = generateRefreshToken(user.id);
     await storeRefreshToken(user.id, refreshToken);
@@ -126,23 +108,24 @@ const registerUser = async ({
   }
 };
 
-/* ─── LOGIN (Email OR Username) ─────────────────────────────────────────── */
+/* ─── LOGIN (Username only) ──────────────────────────────────────────────── */
 
 const loginUser = async ({ identifier, password }) => {
   if (!identifier?.trim() || !password) {
-    throw ApiError.badRequest("Email/username and password are required");
+    throw ApiError.badRequest("Username and password are required");
   }
 
   const normalized = identifier.toLowerCase().trim();
 
   const result = await query(
-    `SELECT 
-        u.id, u.username, u.email, u.password_hash, u.role,
-        u.is_suspended, u.is_verified, u.created_at,
+    `SELECT
+        u.id, u.username, u.role,
+        u.is_suspended, u.created_at,
+        u.password_hash,
         p.full_name, p.bio, p.avatar_url
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
-     WHERE LOWER(u.email) = $1 OR LOWER(u.username) = $1`,
+     WHERE LOWER(u.username) = $1`,
     [normalized],
   );
 
@@ -169,9 +152,7 @@ const loginUser = async ({ identifier, password }) => {
     user: {
       id: user.id,
       username: user.username,
-      email: user.email,
       role: user.role,
-      is_verified: user.is_verified,
       created_at: user.created_at,
       profile: {
         full_name: user.full_name,
@@ -186,19 +167,15 @@ const loginUser = async ({ identifier, password }) => {
 
 /* ─── PASSWORD RESET (Security Question) ────────────────────────────────── */
 
-/**
- * Step 1: Get the security question for a given email
- * Always returns a question (prevents user enumeration)
- */
-const getSecurityQuestion = async (email) => {
-  const normalizedEmail = email.toLowerCase().trim();
+const getSecurityQuestion = async (username) => {
+  const normalized = username.toLowerCase().trim();
 
   const result = await query(
-    "SELECT security_question FROM users WHERE LOWER(email) = LOWER($1)",
-    [normalizedEmail],
+    "SELECT security_question FROM users WHERE LOWER(username) = LOWER($1)",
+    [normalized],
   );
 
-  // Return a decoy question if user doesn't exist
+  // Always return something — prevent username enumeration
   if (result.rows.length === 0) {
     return { question: "What is your favorite color?" };
   }
@@ -206,11 +183,8 @@ const getSecurityQuestion = async (email) => {
   return { question: result.rows[0].security_question };
 };
 
-/**
- * Step 2: Verify answer and reset password
- */
 const resetPasswordWithSecurityAnswer = async ({
-  email,
+  username,
   securityAnswer,
   newPassword,
 }) => {
@@ -221,15 +195,14 @@ const resetPasswordWithSecurityAnswer = async ({
     throw ApiError.badRequest("Security answer is required");
   }
 
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalized = username.toLowerCase().trim();
 
   const userResult = await query(
-    `SELECT id, security_answer_hash 
-     FROM users WHERE LOWER(email) = LOWER($1)`,
-    [normalizedEmail],
+    "SELECT id, security_answer_hash FROM users WHERE LOWER(username) = LOWER($1)",
+    [normalized],
   );
 
-  // Same error for "not found" and "wrong answer" → prevents enumeration
+  // Same error for not-found and wrong answer
   if (userResult.rows.length === 0) {
     throw ApiError.badRequest("Incorrect security answer");
   }
@@ -252,7 +225,6 @@ const resetPasswordWithSecurityAnswer = async ({
     user.id,
   ]);
 
-  // Invalidate all existing sessions
   await query("DELETE FROM user_sessions WHERE user_id = $1", [user.id]);
 
   return { message: "Password reset successfully. Please login." };
@@ -266,7 +238,7 @@ const deleteAccountWithSecurityAnswer = async (userId, securityAnswer) => {
   }
 
   const userResult = await query(
-    `SELECT u.email, u.role, u.security_answer_hash, p.avatar_url
+    `SELECT u.role, u.security_answer_hash, p.avatar_url
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
      WHERE u.id = $1`,
@@ -294,7 +266,6 @@ const deleteAccountWithSecurityAnswer = async (userId, securityAnswer) => {
     throw ApiError.badRequest("Incorrect security answer");
   }
 
-  // Collect all media to delete
   const mediaResult = await query(
     `SELECT
       (SELECT array_agg(image_url) FROM post_images pi
@@ -307,13 +278,11 @@ const deleteAccountWithSecurityAnswer = async (userId, securityAnswer) => {
 
   const media = mediaResult.rows[0];
 
-  // Delete stored files
   if (avatar_url) deleteFile(avatar_url, "avatars");
   (media.images || []).forEach((f) => f && deleteFile(f, "images"));
   (media.videos || []).forEach((f) => f && deleteFile(f, "videos"));
   (media.posters || []).forEach((f) => f && deleteFile(f, "notices"));
 
-  // Delete user (DB cascade handles related records)
   await query("DELETE FROM users WHERE id = $1", [userId]);
 
   return { deleted: true };
@@ -342,7 +311,7 @@ const refreshAccessToken = async (refreshToken) => {
   const session = sessionResult.rows[0];
 
   const userResult = await query(
-    "SELECT id, username, email, role, is_suspended FROM users WHERE id = $1",
+    "SELECT id, username, role, is_suspended FROM users WHERE id = $1",
     [session.user_id],
   );
 
@@ -356,7 +325,6 @@ const refreshAccessToken = async (refreshToken) => {
     throw ApiError.forbidden("Account is suspended");
   }
 
-  // Rotate refresh token
   await query("DELETE FROM user_sessions WHERE id = $1", [session.id]);
 
   const newAccessToken = generateAccessToken(user.id, user.role);
@@ -375,8 +343,6 @@ const logoutUser = async (refreshToken) => {
 const logoutAllDevices = async (userId) => {
   await query("DELETE FROM user_sessions WHERE user_id = $1", [userId]);
 };
-
-/* ─── PROFILE / PASSWORD ─────────────────────────────────────────────────── */
 
 const changePassword = async (userId, currentPassword, newPassword) => {
   const result = await query("SELECT password_hash FROM users WHERE id = $1", [
@@ -406,10 +372,11 @@ const changePassword = async (userId, currentPassword, newPassword) => {
 
 const getCurrentUser = async (userId) => {
   const result = await query(
-    `SELECT 
-        u.id, u.username, u.email, u.role, u.is_verified, u.created_at,
+    `SELECT
+        u.id, u.username, u.role, u.created_at,
         p.full_name, p.bio, p.avatar_url,
-        COUNT(DISTINCT po.id) FILTER (WHERE po.is_deleted = false) AS total_posts
+        COUNT(DISTINCT po.id)
+          FILTER (WHERE po.is_deleted = false) AS total_posts
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
      LEFT JOIN posts po ON po.user_id = u.id
@@ -425,9 +392,7 @@ const getCurrentUser = async (userId) => {
   return {
     id: user.id,
     username: user.username,
-    email: user.email,
     role: user.role,
-    is_verified: user.is_verified,
     created_at: user.created_at,
     profile: {
       full_name: user.full_name,
@@ -438,17 +403,15 @@ const getCurrentUser = async (userId) => {
   };
 };
 
-/* ─── EXPORTS ────────────────────────────────────────────────────────────── */
-
 module.exports = {
-  registerUser, // POST /auth/register
-  loginUser, // POST /auth/login
-  getSecurityQuestion, // GET  /auth/security-question?email=
-  resetPasswordWithSecurityAnswer, // POST /auth/reset-password
-  deleteAccountWithSecurityAnswer, // DELETE /auth/account
-  refreshAccessToken, // POST /auth/refresh
-  logoutUser, // POST /auth/logout
-  logoutAllDevices, // POST /auth/logout-all
-  changePassword, // PUT  /auth/password
-  getCurrentUser, // GET  /auth/me
+  registerUser,
+  loginUser,
+  getSecurityQuestion,
+  resetPasswordWithSecurityAnswer,
+  deleteAccountWithSecurityAnswer,
+  refreshAccessToken,
+  logoutUser,
+  logoutAllDevices,
+  changePassword,
+  getCurrentUser,
 };

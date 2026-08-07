@@ -5,11 +5,10 @@ import {
   Eye,
   Lock,
   Trash2,
-  Mail,
   User,
   Database,
-  Bell,
   Globe,
+  HelpCircle,
 } from "lucide-react";
 import useTheme from "../hooks/useTheme";
 
@@ -39,12 +38,20 @@ const PrivacyPolicyPage = () => {
       >
         <button
           onClick={() => {
-            if (window.history.length > 1) {
-              navigate(-1);
-            } else {
-              window.close();
-              setTimeout(() => navigate("/login"), 100);
-            }
+            if (window.history.length > 1) navigate(-1);
+            else navigate("/login");
+          }}
+          style={{
+            background: c.bgHover,
+            border: "none",
+            borderRadius: "10px",
+            width: "34px",
+            height: "34px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: c.text,
           }}
         >
           <ArrowLeft size={18} />
@@ -76,31 +83,15 @@ const PrivacyPolicyPage = () => {
       <PolicyCard c={c}>
         <p style={{ ...textStyle(c), marginBottom: "12px" }}>
           Welcome to <strong style={{ color: c.text }}>ZimHub</strong> — a
-          private social platform built exclusively for Zimbabwean students at
-          Aditya Institutions. Your privacy matters to us. This policy explains
+          private social platform built exclusively for Zimbabwean university
+          students. Your privacy is our priority. This policy explains exactly
           what data we collect, how we use it, and your rights.
         </p>
-        <div
-          style={{
-            padding: "12px 14px",
-            background: c.accentLight,
-            border: `1px solid ${c.accent}30`,
-            borderRadius: "10px",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "13px",
-              color: c.accent,
-              margin: 0,
-              fontWeight: 600,
-              lineHeight: 1.5,
-            }}
-          >
-            📌 Key point: ZimHub is a closed community. Only registered students
-            can access the platform. Your data is never sold to third parties.
-          </p>
-        </div>
+        <HighlightBox c={c} type="info">
+          📌 ZimHub is a closed community. Only registered students can access
+          the platform. No email address is required or stored. Your data is
+          never sold to third parties.
+        </HighlightBox>
       </PolicyCard>
 
       {/* Data We Collect */}
@@ -109,10 +100,10 @@ const PrivacyPolicyPage = () => {
           <BulletList
             c={c}
             items={[
-              "Full name (can be a display name — ghost accounts are allowed)",
-              "Username (can be a pseudonym)",
-              "Email address (must be valid for account verification)",
+              "Full name (can be a display name — ghost accounts allowed)",
+              "Username (can be a pseudonym or nickname)",
               "Password (encrypted with bcrypt — we never see your actual password)",
+              "Security question and answer (hashed — used only for password reset)",
               "Profile picture (optional)",
               "Bio (optional)",
             ]}
@@ -133,41 +124,39 @@ const PrivacyPolicyPage = () => {
           />
         </SubSection>
 
-        <HighlightBox c={c} type="info">
-          We do NOT collect: location data, contacts, browsing history,
-          financial information, or any data from other apps on your device.
+        <HighlightBox c={c} type="success">
+          ✅ We do NOT collect: email addresses, phone numbers, location data,
+          contacts, browsing history, financial information, or any data from
+          other apps on your device.
         </HighlightBox>
       </PolicySection>
 
-      {/* Email Privacy */}
-      <PolicySection c={c} icon={Mail} title="Email Address Privacy">
+      {/* No Email Policy */}
+      <PolicySection c={c} icon={Shield} title="No Email Required">
         <p style={textStyle(c)}>
-          Your email address is treated as{" "}
-          <strong style={{ color: c.text }}>confidential</strong>:
+          ZimHub does not require, request, or store email addresses.
         </p>
         <BulletList
           c={c}
           items={[
-            "Only platform administrators can see your email address",
-            "Other students CANNOT see your email — it is hidden from your public profile",
-            "Your email is used only for: account verification (OTP), password reset, and account deletion confirmation",
-            "We will never share your email with other students or third parties",
-            "Admins will only use your email for platform-related communication",
+            "Registration requires only a username and password",
+            "Password recovery uses your security question and answer — no email needed",
+            "Account deletion uses your security question and answer — no email needed",
+            "No verification emails are ever sent",
+            "No account confirmation emails are ever sent",
+            "No notification emails are ever sent",
           ]}
         />
-
-        <HighlightBox c={c} type="warning">
-          ⚠️ Important: While you may use any display name or username (ghost
-          accounts are allowed), you MUST use a valid email address. This is
-          required for account security (password reset, account verification).
+        <HighlightBox c={c} type="info">
+          🔐 Your security question and answer are stored as a one-way hash.
+          Even we cannot read your answer — it is used only to verify you during
+          password reset.
         </HighlightBox>
       </PolicySection>
 
       {/* Ghost Accounts */}
       <PolicySection c={c} icon={User} title="Anonymous & Ghost Accounts">
-        <p style={textStyle(c)}>
-          We respect your right to privacy on the platform:
-        </p>
+        <p style={textStyle(c)}>We fully support anonymous participation:</p>
         <BulletList
           c={c}
           items={[
@@ -175,15 +164,13 @@ const PrivacyPolicyPage = () => {
             "Your username can be a pseudonym or nickname",
             "Profile photos are optional",
             "Bio is optional",
-            "You can participate fully without revealing your real identity to other students",
-            "Only admins can link your account to your email if needed for support",
+            "You can participate fully without revealing your real identity to anyone",
+            "No personal information is required at any point",
           ]}
         />
-
         <HighlightBox c={c} type="success">
-          ✅ Ghost account policy: You are allowed to use ZimHub without
-          revealing your real identity to other students. However, your email
-          must be real and valid.
+          ✅ Ghost account policy: You are allowed to use ZimHub completely
+          anonymously. No real name, no email, no phone number is ever required.
         </HighlightBox>
       </PolicySection>
 
@@ -195,31 +182,28 @@ const PrivacyPolicyPage = () => {
           items={[
             "Your user ID is NOT attached to suggestions",
             "Your username is NOT attached to suggestions",
-            "Your email is NOT attached to suggestions",
             "Admins can read suggestions but CANNOT identify who sent them",
-            "A hashed version of your IP is stored only to prevent spam (rate limiting) — this hash cannot be reversed to identify you",
+            "A hashed version of your IP is stored only to prevent spam — this hash cannot be reversed",
             "Admins cannot and will not reply to suggestions",
           ]}
         />
       </PolicySection>
 
       {/* How We Use Data */}
-      <PolicySection c={c} icon={Shield} title="How We Use Your Data">
+      <PolicySection c={c} icon={Database} title="How We Use Your Data">
         <BulletList
           c={c}
           items={[
-            "Display your profile to other students (name, username, bio, avatar — NOT email)",
+            "Display your profile to other students (name, username, bio, avatar only)",
             "Show your posts, comments, and notices in the community feed",
-            "Send you notifications about likes, comments, and admin announcements",
-            "Send verification codes (OTP) to your email for account security",
+            "Send you in-app notifications about likes, comments, and announcements",
             "Moderate content to maintain a safe community",
             "Generate anonymous platform statistics (total users, posts, etc.)",
             "Automatically delete posts after 7 days to manage storage",
           ]}
         />
-
         <HighlightBox c={c} type="info">
-          We NEVER use your data for: advertising, profiling, selling to third
+          We NEVER use your data for advertising, profiling, selling to third
           parties, tracking across other websites, or any commercial purpose.
         </HighlightBox>
       </PolicySection>
@@ -243,7 +227,7 @@ const PrivacyPolicyPage = () => {
         />
         <p style={textStyle(c)}>
           Violations may result in content removal, account suspension, or
-          permanent ban at the discretion of platform administrators.
+          permanent ban at admin discretion.
         </p>
       </PolicySection>
 
@@ -258,13 +242,12 @@ const PrivacyPolicyPage = () => {
             "View your profile — see all information associated with your account",
             "Edit your profile — change your name, username, bio, and avatar at any time",
             "Delete your posts — remove any content you have posted",
-            "Delete your account — permanently remove your account and ALL associated data (posts, comments, likes, notices, media files)",
-            "Account deletion requires email verification (OTP) for security",
+            "Delete your account — permanently remove your account and ALL associated data",
+            "Account deletion requires your security answer for verification",
             "Account deletion is immediate and irreversible",
-            "After deletion, your username and email become available for new registrations",
+            "After deletion, your username becomes available for new registrations",
           ]}
         />
-
         <HighlightBox c={c} type="warning">
           ⚠️ Account deletion is permanent. All your posts, comments, likes,
           notices, and uploaded media will be permanently deleted and cannot be
@@ -280,7 +263,7 @@ const PrivacyPolicyPage = () => {
         <BulletList
           c={c}
           items={[
-            "View all user profiles including email addresses (for support purposes only)",
+            "View all user profiles (username, full name, bio, avatar — no email)",
             "Remove inappropriate content (posts, comments, notices)",
             "Suspend or ban accounts that violate community guidelines",
             "Create platform-wide announcements",
@@ -297,10 +280,7 @@ const PrivacyPolicyPage = () => {
 
       {/* Changes */}
       <PolicySection c={c} icon={Globe} title="Changes to This Policy">
-        <p style={textStyle(c)}>
-          We may update this privacy policy from time to time. When we make
-          changes:
-        </p>
+        <p style={textStyle(c)}>When we make changes to this policy:</p>
         <BulletList
           c={c}
           items={[
@@ -325,10 +305,10 @@ const PrivacyPolicyPage = () => {
         </h3>
         <p style={{ ...textStyle(c), marginBottom: "12px" }}>
           If you have any questions about this privacy policy or how your data
-          is handled:
+          is handled, use the in-app Help & Support feature to contact admins
+          directly.
         </p>
-        <a
-          href="mailto:ishythrillar@gmail.com"
+        <div
           style={{
             display: "flex",
             alignItems: "center",
@@ -336,18 +316,10 @@ const PrivacyPolicyPage = () => {
             padding: "12px 14px",
             background: c.accentLight,
             borderRadius: "10px",
-            textDecoration: "none",
             border: `1px solid ${c.accent}30`,
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-1px)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
           }}
         >
-          <Mail size={18} color={c.accent} />
+          <HelpCircle size={18} color={c.accent} />
           <div>
             <p
               style={{
@@ -357,7 +329,7 @@ const PrivacyPolicyPage = () => {
                 margin: 0,
               }}
             >
-              Contact us
+              Help & Support
             </p>
             <p
               style={{
@@ -366,43 +338,22 @@ const PrivacyPolicyPage = () => {
                 margin: "2px 0 0",
               }}
             >
-              ishythrillar@gmail.com
+              Available inside the app under Settings
             </p>
           </div>
-        </a>
-
-        <p
-          style={{
-            fontSize: "12px",
-            color: c.textMuted,
-            margin: "16px 0 0",
-            textAlign: "center",
-            lineHeight: 1.5,
-          }}
-        >
-          You can also use the in-app Help & Support feature to contact admins
-          directly.
-        </p>
+        </div>
       </PolicyCard>
-      {/* Close / Go Back Button */}
-      <div
-        style={{
-          textAlign: "center",
-          padding: "20px 0",
-        }}
-      >
+
+      {/* Go Back */}
+      <div style={{ textAlign: "center", padding: "20px 0" }}>
         <button
           onClick={() => {
-            if (window.history.length > 1) {
-              navigate(-1);
-            } else {
-              window.close();
-              setTimeout(() => navigate("/login"), 100);
-            }
+            if (window.history.length > 1) navigate(-1);
+            else navigate("/login");
           }}
           style={{
             padding: "14px 32px",
-            background: "linear-gradient(135deg, #3B82F6, #2563eb)",
+            background: "linear-gradient(135deg,#3B82F6,#2563eb)",
             color: "#ffffff",
             border: "none",
             borderRadius: "14px",
@@ -413,12 +364,12 @@ const PrivacyPolicyPage = () => {
             boxShadow: "0 4px 14px rgba(59,130,246,0.3)",
             transition: "all 0.15s ease",
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-1px)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-          }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.transform = "translateY(-1px)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.transform = "translateY(0)")
+          }
         >
           ← Go Back
         </button>
@@ -427,7 +378,7 @@ const PrivacyPolicyPage = () => {
   );
 };
 
-/* ─── Helper Components ─── */
+/* ─── Helper Components ──────────────────────────────────────────────────── */
 
 const PolicyCard = ({ c, children }) => (
   <div
@@ -483,7 +434,6 @@ const PolicySection = ({ c, icon: Icon, title, children }) => (
           fontWeight: 800,
           color: c.text,
           margin: 0,
-          fontFamily: "Inter, sans-serif",
         }}
       >
         {title}
@@ -501,7 +451,6 @@ const SubSection = ({ c, title, children }) => (
         fontWeight: 700,
         color: c.text,
         margin: "0 0 8px",
-        fontFamily: "Inter, sans-serif",
       }}
     >
       {title}
@@ -528,7 +477,6 @@ const BulletList = ({ c, items }) => (
           marginBottom: "6px",
           paddingLeft: "4px",
           position: "relative",
-          fontFamily: "Inter, sans-serif",
         }}
       >
         <span
@@ -554,7 +502,6 @@ const HighlightBox = ({ c, type, children }) => {
     success: { bg: c.successLight, border: c.success, color: c.success },
     danger: { bg: c.dangerLight, border: c.danger, color: c.danger },
   };
-
   const cfg = configs[type] || configs.info;
 
   return (
@@ -576,7 +523,6 @@ const HighlightBox = ({ c, type, children }) => {
           margin: 0,
           fontWeight: 600,
           lineHeight: 1.5,
-          fontFamily: "Inter, sans-serif",
         }}
       >
         {children}
@@ -590,7 +536,6 @@ const textStyle = (c) => ({
   color: c.textSec,
   lineHeight: 1.6,
   margin: "0 0 8px",
-  fontFamily: "Inter, sans-serif",
 });
 
 export default PrivacyPolicyPage;

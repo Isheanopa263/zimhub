@@ -9,7 +9,6 @@ import {
   Trash2,
   ChevronRight,
   AlertTriangle,
-  Mail,
   Info,
   HelpCircle,
   FileText,
@@ -97,7 +96,7 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      {/* Account Info */}
+      {/* Account Info — username only */}
       <Section c={c} title="Account">
         <InfoCard
           c={c}
@@ -105,7 +104,6 @@ const SettingsPage = () => {
           label="Username"
           value={`@${user?.username}`}
         />
-        <InfoCard c={c} icon={Mail} label="Email" value={user?.email} />
       </Section>
 
       {/* Security */}
@@ -119,12 +117,11 @@ const SettingsPage = () => {
           description="Update your account password"
           onClick={() => setPasswordOpen(true)}
         />
-
         <SettingButton
           c={c}
           icon={HelpCircle}
           iconColor="#10b981"
-          iconBg="rgba(16, 185, 129, 0.12)"
+          iconBg="rgba(16,185,129,0.12)"
           title="Help & Support"
           description="Get help or send suggestions"
           onClick={() => navigate("/support")}
@@ -146,7 +143,7 @@ const SettingsPage = () => {
         </Section>
       )}
 
-      {/* About */}
+      {/* App */}
       <Section c={c} title="App">
         <SettingButton
           c={c}
@@ -168,7 +165,7 @@ const SettingsPage = () => {
         />
       </Section>
 
-      {/* Sign Out */}
+      {/* Session */}
       <Section c={c} title="Session">
         <SettingButton
           c={c}
@@ -275,12 +272,8 @@ const SettingsPage = () => {
                 fontFamily: "Inter, sans-serif",
                 transition: "all 0.15s ease",
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = "0.9";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = "1";
-              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
               Delete My Account
             </button>
@@ -292,7 +285,6 @@ const SettingsPage = () => {
       <DeleteAccountModal
         isOpen={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        userEmail={user?.email}
       />
       <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
       <ChangePasswordModal
@@ -303,7 +295,7 @@ const SettingsPage = () => {
   );
 };
 
-/* ─── Sub Components ────────────────────────────────────────── */
+/* ─── Sub Components ─────────────────────────────────────────────────────── */
 
 const Section = ({ title, children, c }) => (
   <div style={{ marginBottom: "24px" }}>

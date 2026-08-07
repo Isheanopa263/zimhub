@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,7 +6,6 @@ import { z } from "zod";
 import {
   User,
   AtSign,
-  Mail,
   Lock,
   FileText,
   ArrowRight,
@@ -23,6 +22,8 @@ import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ThemeToggleButton from "../../components/ui/ThemeToggleButton";
 
+/* ─── Constants ──────────────────────────────────────────────────────────── */
+
 const SECURITY_QUESTIONS = [
   "What is the name of your first pet?",
   "What city were you born in?",
@@ -36,47 +37,52 @@ const SECURITY_QUESTIONS = [
   "What street did you grow up on?",
 ];
 
+/* ─── Schema ─────────────────────────────────────────────────────────────── */
+
 const registerSchema = z
   .object({
     fullName: z
       .string()
-      .min(2)
-      .max(100)
+      .min(2, "Full name must be at least 2 characters")
+      .max(100, "Full name is too long")
       .regex(/^[a-zA-Z\s'\-.]+$/, "Only letters, spaces, hyphens, periods"),
     username: z
       .string()
-      .min(3)
-      .max(30)
+      .min(3, "Username must be at least 3 characters")
+      .max(30, "Username is too long")
       .regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers and underscores"),
-    email: z.string().min(1, "Email is required").email("Invalid email"),
     password: z
       .string()
-      .min(8)
+      .min(8, "Password must be at least 8 characters")
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
         "Must contain uppercase, lowercase and number",
       ),
-    confirmPassword: z.string().min(1, "Please confirm password"),
-    securityQuestion: z.string().min(1, "Select a security question"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+    securityQuestion: z.string().min(1, "Please select a security question"),
     securityAnswer: z
       .string()
       .min(2, "Answer must be at least 2 characters")
-      .max(100),
-    bio: z.string().max(300).optional().or(z.literal("")),
+      .max(100, "Answer is too long"),
+    bio: z.string().max(300, "Bio is too long").optional().or(z.literal("")),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
 
+/* ─── Password Strength ──────────────────────────────────────────────────── */
+
 const PasswordStrength = ({ password, c }) => {
   if (!password) return null;
+
   const checks = [
     { met: password.length >= 8 },
     { met: /[A-Z]/.test(password) },
     { met: /[a-z]/.test(password) },
     { met: /\d/.test(password) },
   ];
+
   const strength = checks.filter((x) => x.met).length;
   const colors = ["#f87171", "#fb923c", "#facc15", "#4ade80"];
   const labels = ["Weak", "Fair", "Good", "Strong"];
@@ -113,6 +119,8 @@ const PasswordStrength = ({ password, c }) => {
   );
 };
 
+/* ─── Component ──────────────────────────────────────────────────────────── */
+
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
@@ -129,7 +137,6 @@ const RegisterPage = () => {
     defaultValues: {
       fullName: "",
       username: "",
-      email: "",
       password: "",
       confirmPassword: "",
       securityQuestion: "",
@@ -160,6 +167,7 @@ const RegisterPage = () => {
     fontFamily: "Inter, sans-serif",
     outline: "none",
     transition: "all 0.15s ease",
+    boxSizing: "border-box",
   };
 
   return (
@@ -171,8 +179,8 @@ const RegisterPage = () => {
         justifyContent: "center",
         padding: "20px",
         background: isDark
-          ? "linear-gradient(135deg, #050810 0%, #0A0F1C 50%, #050810 100%)"
-          : "linear-gradient(135deg, #0F172A 0%, #1e293b 50%, #0F172A 100%)",
+          ? "linear-gradient(135deg,#050810 0%,#0A0F1C 50%,#050810 100%)"
+          : "linear-gradient(135deg,#0F172A 0%,#1e293b 50%,#0F172A 100%)",
         position: "relative",
         overflow: "hidden",
         fontFamily: "Inter, system-ui, sans-serif",
@@ -180,6 +188,7 @@ const RegisterPage = () => {
     >
       <ThemeToggleButton position="top-right" />
 
+      {/* Background blobs */}
       <div
         style={{
           position: "absolute",
@@ -188,7 +197,7 @@ const RegisterPage = () => {
           width: "400px",
           height: "400px",
           background:
-            "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
+            "radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%)",
           borderRadius: "50%",
           pointerEvents: "none",
         }}
@@ -201,7 +210,7 @@ const RegisterPage = () => {
           width: "400px",
           height: "400px",
           background:
-            "radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)",
+            "radial-gradient(circle,rgba(59,130,246,0.08) 0%,transparent 70%)",
           borderRadius: "50%",
           pointerEvents: "none",
         }}
@@ -235,7 +244,7 @@ const RegisterPage = () => {
             background: c.bgCard,
             borderRadius: "24px",
             padding: "36px 32px",
-            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
             border: `1px solid ${c.border}`,
             maxHeight: "85vh",
             overflowY: "auto",
@@ -256,15 +265,27 @@ const RegisterPage = () => {
             >
               Join ZimHub 🎓
             </h1>
-            <p style={{ color: c.textTer, fontSize: "14px", marginTop: "6px" }}>
+            <p
+              style={{
+                color: c.textTer,
+                fontSize: "14px",
+                marginTop: "6px",
+                marginBottom: 0,
+              }}
+            >
               Create your student account
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <div
-              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+              }}
             >
+              {/* Full Name */}
               <Input
                 label="Full Name"
                 name="fullName"
@@ -277,30 +298,20 @@ const RegisterPage = () => {
                 {...register("fullName")}
               />
 
+              {/* Username */}
               <Input
                 label="Username"
                 name="username"
                 type="text"
-                placeholder="user1"
+                placeholder="e.g. john_doe"
                 icon={AtSign}
                 error={errors.username?.message}
-                helperText="Can be any name"
+                helperText="Used to log in — can be a pseudonym"
                 required
                 {...register("username")}
               />
 
-              <Input
-                label="Email Address"
-                name="email"
-                type="email"
-                placeholder="user@gmail.com"
-                icon={Mail}
-                error={errors.email?.message}
-                helperText="Must be valid used for account recovery"
-                required
-                {...register("email")}
-              />
-
+              {/* Password */}
               <div>
                 <Input
                   label="Password"
@@ -315,6 +326,7 @@ const RegisterPage = () => {
                 <PasswordStrength password={watchedPassword} c={c} />
               </div>
 
+              {/* Confirm Password */}
               <Input
                 label="Confirm Password"
                 name="confirmPassword"
@@ -369,6 +381,7 @@ const RegisterPage = () => {
                       fontSize: "12px",
                       color: c.danger,
                       marginTop: "6px",
+                      marginBottom: 0,
                     }}
                   >
                     {errors.securityQuestion.message}
@@ -381,10 +394,10 @@ const RegisterPage = () => {
                 label="Security Answer"
                 name="securityAnswer"
                 type="text"
-                placeholder="Your answer (case-insensitive)"
+                placeholder="Your answer (not case-sensitive)"
                 icon={Shield}
                 error={errors.securityAnswer?.message}
-                helperText="Used for password reset & account recovery"
+                helperText="Used to reset your password if forgotten"
                 required
                 {...register("securityAnswer")}
               />
@@ -429,9 +442,22 @@ const RegisterPage = () => {
                     {...register("bio")}
                   />
                 </div>
+                {errors.bio && (
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: c.danger,
+                      marginTop: "6px",
+                      marginBottom: 0,
+                    }}
+                  >
+                    {errors.bio.message}
+                  </p>
+                )}
               </div>
             </div>
 
+            {/* Submit */}
             <div style={{ marginTop: "24px" }}>
               <Button type="submit" fullWidth isLoading={isLoading} size="lg">
                 Create Account
@@ -474,7 +500,7 @@ const RegisterPage = () => {
               </button>
               .
               <br />
-              Ghost accounts allowed.
+              No email required. Ghost accounts allowed.
             </p>
           </form>
 
@@ -484,6 +510,7 @@ const RegisterPage = () => {
               fontSize: "14px",
               color: c.textTer,
               marginTop: "24px",
+              marginBottom: 0,
             }}
           >
             Already have an account?{" "}

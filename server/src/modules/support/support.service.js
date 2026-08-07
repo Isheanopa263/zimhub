@@ -5,13 +5,8 @@ const { getFileUrl } = require("../../utils/storage");
 const { getPaginationMeta } = require("../../utils/helpers");
 const notificationsService = require("../notifications/notifications.service");
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   QUERIES (Private — User to Admin with Replies)
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ─── QUERIES ────────────────────────────────────────────────────────────── */
 
-/**
- * User creates a new query/complaint
- */
 const createQuery = async (
   userId,
   { category, subject, message, priority },
@@ -19,11 +14,9 @@ const createQuery = async (
   if (!category || !subject?.trim() || !message?.trim()) {
     throw ApiError.badRequest("Category, subject and message are required");
   }
-
   if (subject.length > 255) {
     throw ApiError.badRequest("Subject too long (max 255 characters)");
   }
-
   if (message.length > 5000) {
     throw ApiError.badRequest("Message too long (max 5000 characters)");
   }
@@ -33,9 +26,10 @@ const createQuery = async (
   try {
     await client.query("BEGIN");
 
-    // Create the query
     const queryResult = await client.query(
-      `INSERT INTO queries (user_id, category, subject, message, priority, last_reply_at, last_reply_by)
+      `INSERT INTO queries
+         (user_id, category, subject, message, priority,
+          last_reply_at, last_reply_by)
        VALUES ($1, $2, $3, $4, $5, NOW(), 'user')
        RETURNING id, created_at`,
       [userId, category, subject.trim(), message.trim(), priority || "normal"],
@@ -43,7 +37,6 @@ const createQuery = async (
 
     const queryId = queryResult.rows[0].id;
 
-    // Create the initial reply (the message itself becomes the first reply in the thread)
     await client.query(
       `INSERT INTO query_replies (query_id, sender_id, sender_type, message)
        VALUES ($1, $2, 'user', $3)`,
@@ -84,9 +77,6 @@ const createQuery = async (
   }
 };
 
-/**
- * Get queries for a user
- */
 const getUserQueries = async (userId, { page = 1, limit = 20, status }) => {
   const offset = (page - 1) * limit;
   const params = [userId];
@@ -105,15 +95,16 @@ const getUserQueries = async (userId, { page = 1, limit = 20, status }) => {
 
   params.push(limit, offset);
   const result = await query(
-    `SELECT 
+    `SELECT
         q.id, q.category, q.subject, q.status, q.priority,
         q.last_reply_at, q.last_reply_by,
         q.created_at, q.updated_at,
-        (SELECT COUNT(*) FROM query_replies WHERE query_id = q.id)::int AS reply_count,
-        (SELECT COUNT(*) FROM query_replies 
-          WHERE query_id = q.id 
-          AND sender_type = 'admin' 
-          AND is_read = false)::int AS unread_admin_replies
+        (SELECT COUNT(*) FROM query_replies
+         WHERE query_id = q.id)::int AS reply_count,
+        (SELECT COUNT(*) FROM query_replies
+         WHERE query_id = q.id
+           AND sender_type = 'admin'
+           AND is_read = false)::int AS unread_admin_replies
      FROM queries q
      ${whereClause}
      ORDER BY q.last_reply_at DESC NULLS LAST, q.created_at DESC
@@ -127,9 +118,6 @@ const getUserQueries = async (userId, { page = 1, limit = 20, status }) => {
   };
 };
 
-/**
- * Get all queries (admin only) with filters
- */
 const getAllQueries = async ({
   page = 1,
   limit = 20,
@@ -145,12 +133,10 @@ const getAllQueries = async ({
     params.push(status);
     conditions.push(`q.status = $${params.length}`);
   }
-
   if (priority && priority !== "all") {
     params.push(priority);
     conditions.push(`q.priority = $${params.length}`);
   }
-
   if (search?.trim()) {
     params.push(`%${search.trim()}%`);
     conditions.push(
@@ -169,23 +155,24 @@ const getAllQueries = async ({
 
   params.push(limit, offset);
   const result = await query(
-    `SELECT 
+    `SELECT
         q.id, q.category, q.subject, q.status, q.priority,
         q.last_reply_at, q.last_reply_by,
         q.created_at, q.updated_at,
-        u.id AS user_id, u.username, u.email,
+        u.id AS user_id, u.username,
         p.full_name, p.avatar_url,
-        (SELECT COUNT(*) FROM query_replies WHERE query_id = q.id)::int AS reply_count,
-        (SELECT COUNT(*) FROM query_replies 
-          WHERE query_id = q.id 
-          AND sender_type = 'user' 
-          AND is_read = false)::int AS unread_user_messages
+        (SELECT COUNT(*) FROM query_replies
+         WHERE query_id = q.id)::int AS reply_count,
+        (SELECT COUNT(*) FROM query_replies
+         WHERE query_id = q.id
+           AND sender_type = 'user'
+           AND is_read = false)::int AS unread_user_messages
      FROM queries q
      JOIN users u ON u.id = q.user_id
      LEFT JOIN profiles p ON p.user_id = q.user_id
      ${whereClause}
-     ORDER BY 
-       CASE q.priority 
+     ORDER BY
+       CASE q.priority
          WHEN 'urgent' THEN 1
          WHEN 'high'   THEN 2
          WHEN 'normal' THEN 3
@@ -203,15 +190,12 @@ const getAllQueries = async ({
   };
 };
 
-/**
- * Get single query with full thread
- */
 const getQueryById = async (queryId, currentUserId, isAdmin = false) => {
   const queryResult = await query(
-    `SELECT 
+    `SELECT
         q.id, q.category, q.subject, q.status, q.priority,
         q.last_reply_at, q.last_reply_by, q.created_at, q.updated_at,
-        u.id AS user_id, u.username, u.email,
+        u.id AS user_id, u.username,
         p.full_name, p.avatar_url
      FROM queries q
      JOIN users u ON u.id = q.user_id
@@ -226,15 +210,14 @@ const getQueryById = async (queryId, currentUserId, isAdmin = false) => {
 
   const q = queryResult.rows[0];
 
-  // Permission check — only owner or admin can view
   if (!isAdmin && q.user_id !== currentUserId) {
     throw ApiError.forbidden("You can only view your own queries");
   }
 
-  // Get all replies in chronological order
   const repliesResult = await query(
-    `SELECT 
-        r.id, r.sender_id, r.sender_type, r.message, r.is_read, r.created_at,
+    `SELECT
+        r.id, r.sender_id, r.sender_type,
+        r.message, r.is_read, r.created_at,
         u.username,
         p.full_name, p.avatar_url
      FROM query_replies r
@@ -245,21 +228,20 @@ const getQueryById = async (queryId, currentUserId, isAdmin = false) => {
     [queryId],
   );
 
-  // Mark messages as read based on who's viewing
   if (isAdmin) {
-    // Admin viewing → mark user messages as read
     await query(
-      `UPDATE query_replies 
-       SET is_read = true 
-       WHERE query_id = $1 AND sender_type = 'user' AND is_read = false`,
+      `UPDATE query_replies SET is_read = true
+       WHERE query_id = $1
+         AND sender_type = 'user'
+         AND is_read = false`,
       [queryId],
     );
   } else {
-    // User viewing their own → mark admin replies as read
     await query(
-      `UPDATE query_replies 
-       SET is_read = true 
-       WHERE query_id = $1 AND sender_type = 'admin' AND is_read = false`,
+      `UPDATE query_replies SET is_read = true
+       WHERE query_id = $1
+         AND sender_type = 'admin'
+         AND is_read = false`,
       [queryId],
     );
   }
@@ -278,7 +260,6 @@ const getQueryById = async (queryId, currentUserId, isAdmin = false) => {
       ? {
           id: q.user_id,
           username: q.username,
-          email: q.email,
           fullName: q.full_name,
           avatarUrl: q.avatar_url ? getFileUrl(q.avatar_url, "avatars") : null,
         }
@@ -299,9 +280,6 @@ const getQueryById = async (queryId, currentUserId, isAdmin = false) => {
   };
 };
 
-/**
- * Reply to a query (user or admin)
- */
 const addReply = async (queryId, senderId, message, isAdmin = false) => {
   if (!message?.trim() || message.length > 5000) {
     throw ApiError.badRequest("Message is required (max 5000 characters)");
@@ -312,7 +290,6 @@ const addReply = async (queryId, senderId, message, isAdmin = false) => {
   try {
     await client.query("BEGIN");
 
-    // Check query exists
     const queryCheck = await client.query(
       `SELECT user_id, status FROM queries WHERE id = $1`,
       [queryId],
@@ -324,12 +301,10 @@ const addReply = async (queryId, senderId, message, isAdmin = false) => {
 
     const query_ = queryCheck.rows[0];
 
-    // Permission check
     if (!isAdmin && query_.user_id !== senderId) {
       throw ApiError.forbidden("You can only reply to your own queries");
     }
 
-    // Can't reply to closed queries
     if (query_.status === "closed") {
       throw ApiError.badRequest(
         "This query is closed. Please create a new one.",
@@ -338,22 +313,21 @@ const addReply = async (queryId, senderId, message, isAdmin = false) => {
 
     const senderType = isAdmin ? "admin" : "user";
 
-    // Add reply
     const replyResult = await client.query(
-      `INSERT INTO query_replies (query_id, sender_id, sender_type, message)
+      `INSERT INTO query_replies
+         (query_id, sender_id, sender_type, message)
        VALUES ($1, $2, $3, $4)
        RETURNING id, created_at`,
       [queryId, senderId, senderType, message.trim()],
     );
 
-    // Update query's last_reply tracking
     let newStatus = query_.status;
     if (isAdmin && query_.status === "open") {
       newStatus = "in_progress";
     }
 
     await client.query(
-      `UPDATE queries 
+      `UPDATE queries
        SET last_reply_at = NOW(), last_reply_by = $1, status = $2
        WHERE id = $3`,
       [senderType, newStatus, queryId],
@@ -361,9 +335,7 @@ const addReply = async (queryId, senderId, message, isAdmin = false) => {
 
     await client.query("COMMIT");
 
-    // Send notifications
     if (isAdmin) {
-      // Admin replied → notify the user
       const senderInfo = await query(
         `SELECT p.full_name FROM profiles p WHERE p.user_id = $1`,
         [senderId],
@@ -374,12 +346,13 @@ const addReply = async (queryId, senderId, message, isAdmin = false) => {
         userId: query_.user_id,
         type: "admin_announcement",
         title: "💬 Admin replied to your query",
-        message: `${adminName}: "${message.substring(0, 80)}${message.length > 80 ? "..." : ""}"`,
+        message: `${adminName}: "${message.substring(0, 80)}${
+          message.length > 80 ? "..." : ""
+        }"`,
         referenceId: queryId,
         referenceType: "query",
       });
     } else {
-      // User replied → notify all admins
       const admins = await query(
         `SELECT id FROM users WHERE role = 'admin' AND is_suspended = false`,
       );
@@ -395,7 +368,9 @@ const addReply = async (queryId, senderId, message, isAdmin = false) => {
           userId: admin.id,
           type: "admin_announcement",
           title: "📨 New reply to query",
-          message: `${userName}: "${message.substring(0, 80)}${message.length > 80 ? "..." : ""}"`,
+          message: `${userName}: "${message.substring(0, 80)}${
+            message.length > 80 ? "..." : ""
+          }"`,
           referenceId: queryId,
           referenceType: "query",
         });
@@ -414,9 +389,6 @@ const addReply = async (queryId, senderId, message, isAdmin = false) => {
   }
 };
 
-/**
- * Update query status (admin only)
- */
 const updateQueryStatus = async (queryId, status, priority = null) => {
   const validStatuses = ["open", "in_progress", "resolved", "closed"];
   const validPriorities = ["low", "normal", "high", "urgent"];
@@ -424,7 +396,6 @@ const updateQueryStatus = async (queryId, status, priority = null) => {
   if (status && !validStatuses.includes(status)) {
     throw ApiError.badRequest("Invalid status");
   }
-
   if (priority && !validPriorities.includes(priority)) {
     throw ApiError.badRequest("Invalid priority");
   }
@@ -436,19 +407,17 @@ const updateQueryStatus = async (queryId, status, priority = null) => {
     params.push(status);
     updates.push(`status = $${params.length}`);
   }
-
   if (priority) {
     params.push(priority);
     updates.push(`priority = $${params.length}`);
   }
-
   if (updates.length === 0) {
     throw ApiError.badRequest("Nothing to update");
   }
 
   params.push(queryId);
   const result = await query(
-    `UPDATE queries SET ${updates.join(", ")} 
+    `UPDATE queries SET ${updates.join(", ")}
      WHERE id = $${params.length}
      RETURNING id, status, priority`,
     params,
@@ -461,9 +430,6 @@ const updateQueryStatus = async (queryId, status, priority = null) => {
   return result.rows[0];
 };
 
-/**
- * Get user's unread query count
- */
 const getUnreadCount = async (userId) => {
   const result = await query(
     `SELECT COUNT(*)::int AS count
@@ -477,9 +443,6 @@ const getUnreadCount = async (userId) => {
   return result.rows[0].count;
 };
 
-/**
- * Get admin's unread count (across all queries)
- */
 const getAdminUnreadCount = async () => {
   const result = await query(
     `SELECT COUNT(*)::int AS count
@@ -489,14 +452,8 @@ const getAdminUnreadCount = async () => {
   return result.rows[0].count;
 };
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   SUGGESTIONS (Anonymous — Read Only by Admins)
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ─── SUGGESTIONS ────────────────────────────────────────────────────────── */
 
-/**
- * Create an anonymous suggestion
- * IP is hashed for rate limiting only — cannot identify the user
- */
 const createSuggestion = async ({ category, content, ipAddress }) => {
   if (!content?.trim() || content.length > 2000) {
     throw ApiError.badRequest("Content is required (max 2000 characters)");
@@ -512,7 +469,6 @@ const createSuggestion = async ({ category, content, ipAddress }) => {
     throw ApiError.badRequest("Invalid category");
   }
 
-  // Hash IP for rate limiting (one-way, can't be reversed)
   const ipHash = ipAddress
     ? crypto
         .createHash("sha256")
@@ -520,12 +476,12 @@ const createSuggestion = async ({ category, content, ipAddress }) => {
         .digest("hex")
     : null;
 
-  // Rate limit: max 3 suggestions per IP per hour
   if (ipHash) {
     const recent = await query(
       `SELECT COUNT(*)::int AS count
        FROM suggestions
-       WHERE ip_hash = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+       WHERE ip_hash = $1
+         AND created_at > NOW() - INTERVAL '1 hour'`,
       [ipHash],
     );
 
@@ -550,9 +506,6 @@ const createSuggestion = async ({ category, content, ipAddress }) => {
   };
 };
 
-/**
- * Get all suggestions (admin only)
- */
 const getSuggestions = async ({
   page = 1,
   limit = 30,
@@ -568,13 +521,10 @@ const getSuggestions = async ({
     params.push(category);
     conditions.push(`category = $${params.length}`);
   }
-
   if (isRead === true || isRead === false) {
     params.push(isRead);
     conditions.push(`is_read = $${params.length}`);
   }
-
-  // Default: hide archived unless explicitly requested
   if (isArchived === true) {
     conditions.push(`is_archived = true`);
   } else if (isArchived === false || isArchived === undefined) {
@@ -613,77 +563,60 @@ const getSuggestions = async ({
   };
 };
 
-/**
- * Mark suggestion as read/unread (admin)
- */
 const markSuggestionRead = async (id, isRead = true) => {
   const result = await query(
-    `UPDATE suggestions SET is_read = $1 
-     WHERE id = $2 
+    `UPDATE suggestions SET is_read = $1
+     WHERE id = $2
      RETURNING id, is_read`,
     [isRead, id],
   );
-
   if (result.rows.length === 0) {
     throw ApiError.notFound("Suggestion not found");
   }
-
   return result.rows[0];
 };
 
-/**
- * Archive suggestion (admin) — soft delete
- */
 const archiveSuggestion = async (id, isArchived = true) => {
   const result = await query(
-    `UPDATE suggestions SET is_archived = $1 
-     WHERE id = $2 
+    `UPDATE suggestions SET is_archived = $1
+     WHERE id = $2
      RETURNING id, is_archived`,
     [isArchived, id],
   );
-
   if (result.rows.length === 0) {
     throw ApiError.notFound("Suggestion not found");
   }
-
   return result.rows[0];
 };
 
-/**
- * Delete suggestion (admin) — hard delete
- */
 const deleteSuggestion = async (id) => {
   const result = await query(
     `DELETE FROM suggestions WHERE id = $1 RETURNING id`,
     [id],
   );
-
   if (result.rows.length === 0) {
     throw ApiError.notFound("Suggestion not found");
   }
-
   return { deleted: true };
 };
 
-/**
- * Get suggestion stats (admin)
- */
 const getSuggestionStats = async () => {
   const result = await query(
     `SELECT
        COUNT(*)::int AS total,
-       COUNT(*) FILTER (WHERE is_read = false AND is_archived = false)::int AS unread,
+       COUNT(*) FILTER (
+         WHERE is_read = false AND is_archived = false
+       )::int AS unread,
        COUNT(*) FILTER (WHERE is_archived = true)::int AS archived,
-       COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')::int AS this_week
+       COUNT(*) FILTER (
+         WHERE created_at > NOW() - INTERVAL '7 days'
+       )::int AS this_week
      FROM suggestions`,
   );
-
   return result.rows[0];
 };
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   FORMATTERS
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ─── FORMATTERS ─────────────────────────────────────────────────────────── */
 
 const formatQuerySummary = (q) => ({
   id: q.id,
@@ -705,14 +638,12 @@ const formatQuerySummaryAdmin = (q) => ({
   user: {
     id: q.user_id,
     username: q.username,
-    email: q.email,
     fullName: q.full_name,
     avatarUrl: q.avatar_url ? getFileUrl(q.avatar_url, "avatars") : null,
   },
 });
 
 module.exports = {
-  // Queries
   createQuery,
   getUserQueries,
   getAllQueries,
@@ -721,8 +652,6 @@ module.exports = {
   updateQueryStatus,
   getUnreadCount,
   getAdminUnreadCount,
-
-  // Suggestions
   createSuggestion,
   getSuggestions,
   markSuggestionRead,

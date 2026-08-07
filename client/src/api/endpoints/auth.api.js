@@ -1,13 +1,13 @@
 import api from "../axios";
 
 export const authApi = {
-  // Register (no OTP — instant with security question)
+  // Register (no email — username + security question)
   register: async (data) => {
     const response = await api.post("/auth/register", data);
     return response.data;
   },
 
-  // Login
+  // Login (username only)
   login: async (credentials) => {
     const response = await api.post("/auth/login", credentials);
     return response.data;
@@ -41,15 +41,17 @@ export const authApi = {
     return response.data;
   },
 
-  // Password reset (security question)
-  getSecurityQuestion: async (email) => {
-    const response = await api.post("/auth/password-reset/question", { email });
+  // Password reset (security question — username based)
+  getSecurityQuestion: async (username) => {
+    const response = await api.post("/auth/password-reset/question", {
+      username,
+    });
     return response.data;
   },
 
-  resetPassword: async ({ email, securityAnswer, newPassword }) => {
+  resetPassword: async ({ username, securityAnswer, newPassword }) => {
     const response = await api.post("/auth/password-reset/confirm", {
-      email,
+      username,
       securityAnswer,
       newPassword,
     });

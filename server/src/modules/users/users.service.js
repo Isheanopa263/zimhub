@@ -4,16 +4,18 @@ const { getFileUrl, deleteFile, uploadFile } = require("../../utils/storage");
 const { remember, invalidate } = require("../../utils/cache");
 
 const getProfileByUsername = async (username, currentUserId = null) => {
-  const cacheKey = `profile:${username.toLowerCase()}:viewer:${currentUserId || "guest"}`;
+  const cacheKey = `profile:${username.toLowerCase()}:viewer:${
+    currentUserId || "guest"
+  }`;
 
   return remember(cacheKey, 120, async () => {
-    // 2 min cache
     const result = await query(
-      `SELECT 
-          u.id, u.username, u.email, u.role, u.is_verified, 
+      `SELECT
+          u.id, u.username, u.role,
           u.is_suspended, u.created_at,
           p.full_name, p.bio, p.avatar_url,
-          COUNT(DISTINCT po.id) FILTER (WHERE po.is_deleted = false)::int AS post_count,
+          COUNT(DISTINCT po.id)
+            FILTER (WHERE po.is_deleted = false)::int AS post_count,
           COUNT(DISTINCT n.id)::int AS notice_count
        FROM users u
        LEFT JOIN profiles p ON p.user_id = u.id
@@ -34,9 +36,7 @@ const getProfileByUsername = async (username, currentUserId = null) => {
     return {
       id: u.id,
       username: u.username,
-      email: isOwnProfile ? u.email : null,
       role: u.role,
-      isVerified: u.is_verified,
       isSuspended: u.is_suspended,
       isOwnProfile,
       joinedAt: u.created_at,
@@ -64,7 +64,7 @@ const updateProfile = async (
     await client.query("BEGIN");
 
     const existing = await client.query(
-      `SELECT u.username, p.avatar_url 
+      `SELECT u.username, p.avatar_url
        FROM users u
        LEFT JOIN profiles p ON p.user_id = u.id
        WHERE u.id = $1`,
@@ -78,10 +78,10 @@ const updateProfile = async (
     const current = existing.rows[0];
     const oldUsername = current.username;
 
-    // Username change
     if (username && username !== current.username) {
       const usernameTaken = await client.query(
-        `SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2`,
+        `SELECT id FROM users
+         WHERE LOWER(username) = LOWER($1) AND id != $2`,
         [username, userId],
       );
 
@@ -95,7 +95,6 @@ const updateProfile = async (
       ]);
     }
 
-    // Profile fields
     const profileUpdates = [];
     const profileParams = [];
 
@@ -121,7 +120,7 @@ const updateProfile = async (
     if (profileUpdates.length > 0) {
       profileParams.push(userId);
       await client.query(
-        `UPDATE profiles SET ${profileUpdates.join(", ")} 
+        `UPDATE profiles SET ${profileUpdates.join(", ")}
          WHERE user_id = $${profileParams.length}`,
         profileParams,
       );
@@ -129,7 +128,6 @@ const updateProfile = async (
 
     await client.query("COMMIT");
 
-    // Invalidate caches for old AND new username
     await invalidate(`profile:${oldUsername}:*`);
     if (username && username !== oldUsername) {
       await invalidate(`profile:${username}:*`);
@@ -152,7 +150,7 @@ const updateProfile = async (
 
 const removeAvatar = async (userId) => {
   const result = await query(
-    `SELECT u.username, p.avatar_url 
+    `SELECT u.username, p.avatar_url
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
      WHERE u.id = $1`,
@@ -167,7 +165,6 @@ const removeAvatar = async (userId) => {
     userId,
   ]);
 
-  // Invalidate profile cache
   if (result.rows[0]?.username) {
     await invalidate(`profile:${result.rows[0].username}:*`);
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -58,7 +58,9 @@ const UsersTab = () => {
 
   const handleToggleSuspension = async (user) => {
     const action = user.isSuspended ? "unsuspend" : "suspend";
-    if (!window.confirm(`Are you sure you want to ${action} ${user.fullName}?`))
+    if (
+      !window.confirm(`Are you sure you want to ${action} @${user.username}?`)
+    )
       return;
 
     try {
@@ -76,7 +78,7 @@ const UsersTab = () => {
 
   const handleChangeRole = async (user) => {
     const newRole = user.role === "admin" ? "student" : "admin";
-    if (!window.confirm(`Make ${user.fullName} a ${newRole}?`)) return;
+    if (!window.confirm(`Make @${user.username} a ${newRole}?`)) return;
 
     try {
       await adminApi.changeRole(user.id, newRole);
@@ -92,7 +94,7 @@ const UsersTab = () => {
   const handleDelete = async (user) => {
     if (
       !window.confirm(
-        `Delete ${user.fullName}? This will permanently delete:\n` +
+        `Delete @${user.username}? This will permanently delete:\n` +
           `• Their account\n• All their posts (${user.postCount})\n` +
           `• All their notices (${user.noticeCount})\n` +
           `• All comments, likes, and media\n\nThis cannot be undone.`,
@@ -128,7 +130,7 @@ const UsersTab = () => {
             type="search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search by name, username or email..."
+            placeholder="Search by name or username..."
             style={{
               width: "100%",
               padding: "10px 14px 10px 40px",
@@ -139,6 +141,7 @@ const UsersTab = () => {
               fontFamily: "Inter, sans-serif",
               color: c.text,
               outline: "none",
+              boxSizing: "border-box",
             }}
             onFocus={(e) => (e.target.style.borderColor = c.accent)}
             onBlur={(e) => (e.target.style.borderColor = c.borderStrong)}
@@ -225,6 +228,8 @@ const UsersTab = () => {
   );
 };
 
+/* ─── Filter Pill ────────────────────────────────────────────────────────── */
+
 const FilterPill = ({ label, active, onClick, color, c }) => {
   const fallback = color || c.accent;
   return (
@@ -247,6 +252,8 @@ const FilterPill = ({ label, active, onClick, color, c }) => {
     </button>
   );
 };
+
+/* ─── User Row ───────────────────────────────────────────────────────────── */
 
 const UserRow = ({
   user,
@@ -272,6 +279,7 @@ const UserRow = ({
         transition: "background 0.15s ease",
       }}
     >
+      {/* Avatar */}
       <div
         onClick={onViewProfile}
         style={{
@@ -292,15 +300,28 @@ const UserRow = ({
           <img
             src={user.avatarUrl}
             alt={user.fullName}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
           />
         ) : (
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: "15px" }}>
-            {user.fullName?.charAt(0)?.toUpperCase() || "?"}
+          <span
+            style={{
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: "15px",
+            }}
+          >
+            {user.fullName?.charAt(0)?.toUpperCase() ||
+              user.username?.charAt(0)?.toUpperCase() ||
+              "?"}
           </span>
         )}
       </div>
 
+      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -357,6 +378,8 @@ const UserRow = ({
             </span>
           )}
         </div>
+
+        {/* Username only — no email */}
         <p
           style={{
             fontSize: "12px",
@@ -365,7 +388,7 @@ const UserRow = ({
             fontFamily: "Inter, sans-serif",
           }}
         >
-          @{user.username} · {user.email}
+          @{user.username}
         </p>
         <p
           style={{
@@ -379,6 +402,7 @@ const UserRow = ({
         </p>
       </div>
 
+      {/* Actions menu */}
       {!isCurrentUser && (
         <div style={{ position: "relative" }}>
           <button
@@ -403,7 +427,11 @@ const UserRow = ({
             <>
               <div
                 onClick={() => setMenuOpen(false)}
-                style={{ position: "fixed", inset: 0, zIndex: 40 }}
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 40,
+                }}
               />
               <div
                 style={{
@@ -463,6 +491,8 @@ const UserRow = ({
   );
 };
 
+/* ─── Menu Button ────────────────────────────────────────────────────────── */
+
 const MenuButton = ({ icon: Icon, label, color, onClick }) => (
   <button
     onClick={onClick}
@@ -490,6 +520,8 @@ const MenuButton = ({ icon: Icon, label, color, onClick }) => (
   </button>
 );
 
+/* ─── Loading & Empty ────────────────────────────────────────────────────── */
+
 const Loading = ({ c }) => (
   <div style={{ padding: "40px", textAlign: "center" }}>
     <div
@@ -503,7 +535,12 @@ const Loading = ({ c }) => (
         animation: "spin 0.8s linear infinite",
       }}
     />
-    <style>{`@keyframes spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }`}</style>
+    <style>{`
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `}</style>
   </div>
 );
 

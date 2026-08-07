@@ -2,10 +2,6 @@ const jwt = require("jsonwebtoken");
 const ApiError = require("../utils/ApiError");
 const { query } = require("../config/database");
 
-/**
- * Verify JWT access token
- * Attaches decoded user to req.user
- */
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -15,13 +11,11 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
 
-    // Verify user still exists and is not suspended
     const result = await query(
-      `SELECT id, username, email, role, is_suspended 
-       FROM users 
+      `SELECT id, username, role, is_suspended
+       FROM users
        WHERE id = $1`,
       [decoded.userId],
     );
@@ -36,7 +30,6 @@ const authenticate = async (req, res, next) => {
       throw ApiError.forbidden("Your account has been suspended");
     }
 
-    // Attach user to request
     req.user = user;
     next();
   } catch (error) {
@@ -44,10 +37,6 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-/**
- * Require admin role
- * Must be used AFTER authenticate middleware
- */
 const requireAdmin = (req, res, next) => {
   if (req.user?.role !== "admin") {
     return next(ApiError.forbidden("Admin access required"));
@@ -55,23 +44,21 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-/**
- * Optional authentication - doesn't fail if no token
- * Useful for public routes that behave differently when logged in
- */
 const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return next(); // Continue without user
+      return next();
     }
 
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
 
     const result = await query(
-      "SELECT id, username, email, role FROM users WHERE id = $1",
+      `SELECT id, username, role
+       FROM users
+       WHERE id = $1`,
       [decoded.userId],
     );
 

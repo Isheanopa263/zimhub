@@ -15,7 +15,7 @@ import Input from "../../components/ui/Input";
 import ThemeToggleButton from "../../components/ui/ThemeToggleButton";
 
 const loginSchema = z.object({
-  identifier: z.string().min(1, "Email or username is required"),
+  identifier: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -80,13 +80,11 @@ const LoginPage = () => {
       if (status === 429) {
         setError(
           serverMessage ||
-            "Too many login attempts. Please wait 15 minutes before trying again.",
+            "Too many login attempts. Please wait before trying again.",
         );
         setErrorType("rate_limit");
       } else if (status === 401) {
-        setError(
-          "Incorrect email/username or password. Please check your credentials and try again.",
-        );
+        setError("Incorrect username or password. Please check and try again.");
         setErrorType("credentials");
       } else if (status === 403) {
         setError(
@@ -123,8 +121,8 @@ const LoginPage = () => {
         justifyContent: "center",
         padding: "20px",
         background: isDark
-          ? "linear-gradient(135deg, #050810 0%, #0A0F1C 50%, #050810 100%)"
-          : "linear-gradient(135deg, #0F172A 0%, #1e293b 50%, #0F172A 100%)",
+          ? "linear-gradient(135deg,#050810 0%,#0A0F1C 50%,#050810 100%)"
+          : "linear-gradient(135deg,#0F172A 0%,#1e293b 50%,#0F172A 100%)",
         position: "relative",
         overflow: "hidden",
         fontFamily: "Inter, system-ui, sans-serif",
@@ -141,7 +139,7 @@ const LoginPage = () => {
           width: "400px",
           height: "400px",
           background:
-            "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
+            "radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%)",
           borderRadius: "50%",
           pointerEvents: "none",
         }}
@@ -154,7 +152,7 @@ const LoginPage = () => {
           width: "400px",
           height: "400px",
           background:
-            "radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)",
+            "radial-gradient(circle,rgba(59,130,246,0.08) 0%,transparent 70%)",
           borderRadius: "50%",
           pointerEvents: "none",
         }}
@@ -173,7 +171,7 @@ const LoginPage = () => {
             background: c.bgCard,
             borderRadius: "24px",
             padding: "40px 32px",
-            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
             border: `1px solid ${c.border}`,
           }}
         >
@@ -209,7 +207,7 @@ const LoginPage = () => {
                 margin: 0,
               }}
             >
-              Welcome👋
+              Welcome 👋
             </h1>
             <p
               style={{
@@ -218,7 +216,7 @@ const LoginPage = () => {
                 marginTop: "6px",
               }}
             >
-              Sign in to your ZimHub account
+              Sign in with your username and password
             </p>
           </div>
 
@@ -238,13 +236,17 @@ const LoginPage = () => {
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <div
-              style={{ display: "flex", flexDirection: "column", gap: "18px" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "18px",
+              }}
             >
               <Input
-                label="Email or Username"
+                label="Username"
                 name="identifier"
                 type="text"
-                placeholder="you@uni.ac.zw or username"
+                placeholder="your_username"
                 icon={AtSign}
                 error={errors.identifier?.message}
                 required
@@ -281,7 +283,6 @@ const LoginPage = () => {
                   fontSize: "13px",
                   fontWeight: 600,
                   textDecoration: "none",
-                  fontFamily: "Inter, system-ui, sans-serif",
                 }}
               >
                 Forgot password?
@@ -334,7 +335,7 @@ const LoginPage = () => {
         <p
           style={{
             textAlign: "center",
-            color: "rgba(255, 255, 255, 0.3)",
+            color: "rgba(255,255,255,0.3)",
             fontSize: "12px",
             marginTop: "24px",
           }}
@@ -346,7 +347,8 @@ const LoginPage = () => {
   );
 };
 
-/* ─── Error Banner ─── */
+/* ─── Error Banner ───────────────────────────────────────────────────────── */
+
 const ErrorBanner = ({ error, type, onDismiss, c }) => {
   const config = {
     credentials: {
@@ -417,7 +419,6 @@ const ErrorBanner = ({ error, type, onDismiss, c }) => {
             fontWeight: 800,
             color: style.border,
             margin: "0 0 4px",
-            fontFamily: "Inter, sans-serif",
           }}
         >
           {style.title}
@@ -428,7 +429,6 @@ const ErrorBanner = ({ error, type, onDismiss, c }) => {
             color: c.text,
             margin: 0,
             lineHeight: 1.5,
-            fontFamily: "Inter, sans-serif",
           }}
         >
           {error}
@@ -496,11 +496,11 @@ const ErrorBanner = ({ error, type, onDismiss, c }) => {
 
       <style>{`
         @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20%      { transform: translateX(-4px); }
-          40%      { transform: translateX(4px); }
-          60%      { transform: translateX(-2px); }
-          80%      { transform: translateX(2px); }
+          0%,100% { transform: translateX(0); }
+          20%     { transform: translateX(-4px); }
+          40%     { transform: translateX(4px); }
+          60%     { transform: translateX(-2px); }
+          80%     { transform: translateX(2px); }
         }
       `}</style>
     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Mail,
+  AtSign,
   Lock,
   ArrowRight,
   ArrowLeft,
@@ -18,7 +18,34 @@ import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ThemeToggleButton from "../../components/ui/ThemeToggleButton";
 
-import toast from "react-hot-toast";
+/* ─── Error Box ──────────────────────────────────────────────────────────── */
+
+const ErrorBox = ({ c, message }) => (
+  <div
+    style={{
+      background: c.dangerLight,
+      border: `1px solid ${c.danger}40`,
+      borderLeft: `4px solid ${c.danger}`,
+      borderRadius: "10px",
+      padding: "12px 14px",
+      marginBottom: "16px",
+    }}
+  >
+    <p
+      style={{
+        fontSize: "13px",
+        color: c.danger,
+        margin: 0,
+        fontWeight: 600,
+        lineHeight: 1.5,
+      }}
+    >
+      {message}
+    </p>
+  </div>
+);
+
+/* ─── Component ──────────────────────────────────────────────────────────── */
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -26,8 +53,8 @@ const ForgotPasswordPage = () => {
   const { getSecurityQuestion, resetPassword } = useAuth();
   const { c, isDark } = useTheme();
 
-  const [step, setStep] = useState("email"); // 'email' | 'answer' | 'success'
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState("username"); // 'username' | 'answer' | 'success'
+  const [username, setUsername] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -39,34 +66,39 @@ const ForgotPasswordPage = () => {
     if (isAuthenticated) navigate("/feed", { replace: true });
   }, [isAuthenticated, navigate]);
 
+  /* ─── Step 1: Get question by username ────────────────────────────────── */
+
   const handleGetQuestion = async (e) => {
     e?.preventDefault();
-    if (!email.trim()) {
-      setError("Please enter your email");
+    setError(null);
+
+    if (!username.trim()) {
+      setError("Please enter your username");
       return;
     }
 
     setLoading(true);
-    setError(null);
 
-    const result = await getSecurityQuestion(email);
+    const result = await getSecurityQuestion(username);
 
     if (result.success) {
       setQuestion(result.question);
       setStep("answer");
     } else {
-      setError(result.message || "Could not find account");
+      setError(result.message || "Could not retrieve security question");
     }
 
     setLoading(false);
   };
+
+  /* ─── Step 2: Reset password ───────────────────────────────────────────── */
 
   const handleReset = async (e) => {
     e?.preventDefault();
     setError(null);
 
     if (!answer.trim()) {
-      setError("Please enter your answer");
+      setError("Please enter your security answer");
       return;
     }
     if (newPassword.length < 8) {
@@ -85,7 +117,7 @@ const ForgotPasswordPage = () => {
     setLoading(true);
 
     const result = await resetPassword({
-      email,
+      username,
       securityAnswer: answer,
       newPassword,
     });
@@ -93,7 +125,7 @@ const ForgotPasswordPage = () => {
     if (result.success) {
       setStep("success");
     } else {
-      setError(result.message || "Reset failed. Check your answer.");
+      setError(result.message || "Reset failed. Please check your answer.");
     }
 
     setLoading(false);
@@ -108,8 +140,8 @@ const ForgotPasswordPage = () => {
         justifyContent: "center",
         padding: "20px",
         background: isDark
-          ? "linear-gradient(135deg, #050810 0%, #0A0F1C 50%, #050810 100%)"
-          : "linear-gradient(135deg, #0F172A 0%, #1e293b 50%, #0F172A 100%)",
+          ? "linear-gradient(135deg,#050810 0%,#0A0F1C 50%,#050810 100%)"
+          : "linear-gradient(135deg,#0F172A 0%,#1e293b 50%,#0F172A 100%)",
         position: "relative",
         overflow: "hidden",
         fontFamily: "Inter, system-ui, sans-serif",
@@ -125,7 +157,7 @@ const ForgotPasswordPage = () => {
           width: "400px",
           height: "400px",
           background:
-            "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
+            "radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%)",
           borderRadius: "50%",
           pointerEvents: "none",
         }}
@@ -139,9 +171,10 @@ const ForgotPasswordPage = () => {
           zIndex: 1,
         }}
       >
+        {/* Back button */}
         <button
           onClick={() =>
-            step === "email" ? navigate("/login") : setStep("email")
+            step === "username" ? navigate("/login") : setStep("username")
           }
           style={{
             display: "inline-flex",
@@ -153,6 +186,7 @@ const ForgotPasswordPage = () => {
             background: "none",
             border: "none",
             cursor: "pointer",
+            padding: 0,
           }}
         >
           <ArrowLeft size={16} /> Back
@@ -163,11 +197,12 @@ const ForgotPasswordPage = () => {
             background: c.bgCard,
             borderRadius: "24px",
             padding: "40px 32px",
-            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
             border: `1px solid ${c.border}`,
           }}
         >
-          {step === "email" && (
+          {/* ── Step: Username ───────────────────────────────────────────── */}
+          {step === "username" && (
             <>
               <div
                 style={{
@@ -205,8 +240,14 @@ const ForgotPasswordPage = () => {
                 >
                   Forgot your password?
                 </h1>
-                <p style={{ fontSize: "14px", color: c.textTer, margin: 0 }}>
-                  Enter your email to get your security question
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: c.textTer,
+                    margin: 0,
+                  }}
+                >
+                  Enter your username to get your security question
                 </p>
               </div>
 
@@ -214,13 +255,13 @@ const ForgotPasswordPage = () => {
 
               <form onSubmit={handleGetQuestion}>
                 <Input
-                  label="Email Address"
-                  type="email"
-                  placeholder="user@gmail.com"
-                  icon={Mail}
-                  value={email}
+                  label="Username"
+                  type="text"
+                  placeholder="your_username"
+                  icon={AtSign}
+                  value={username}
                   onChange={(e) => {
-                    setEmail(e.target.value);
+                    setUsername(e.target.value);
                     setError(null);
                   }}
                   required
@@ -240,6 +281,7 @@ const ForgotPasswordPage = () => {
                   fontSize: "13px",
                   color: c.textTer,
                   marginTop: "20px",
+                  marginBottom: 0,
                 }}
               >
                 Remembered your password?{" "}
@@ -257,6 +299,7 @@ const ForgotPasswordPage = () => {
             </>
           )}
 
+          {/* ── Step: Answer ─────────────────────────────────────────────── */}
           {step === "answer" && (
             <>
               <div style={{ textAlign: "center", marginBottom: "24px" }}>
@@ -284,12 +327,18 @@ const ForgotPasswordPage = () => {
                 >
                   Security Question
                 </h1>
-                <p style={{ fontSize: "14px", color: c.textTer, margin: 0 }}>
-                  Answer your security question to reset password
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: c.textTer,
+                    margin: 0,
+                  }}
+                >
+                  Answer correctly to reset your password
                 </p>
               </div>
 
-              {/* Display the question */}
+              {/* Question display */}
               <div
                 style={{
                   padding: "14px 16px",
@@ -337,7 +386,7 @@ const ForgotPasswordPage = () => {
                   <Input
                     label="Your Answer"
                     type="text"
-                    placeholder="Answer (case-insensitive)"
+                    placeholder="Answer (not case-sensitive)"
                     icon={Shield}
                     value={answer}
                     onChange={(e) => {
@@ -364,7 +413,7 @@ const ForgotPasswordPage = () => {
                   <Input
                     label="Confirm New Password"
                     type="password"
-                    placeholder="Re-enter password"
+                    placeholder="Re-enter new password"
                     icon={Lock}
                     value={confirmPassword}
                     onChange={(e) => {
@@ -378,12 +427,14 @@ const ForgotPasswordPage = () => {
                 <div style={{ marginTop: "20px" }}>
                   <Button type="submit" fullWidth isLoading={loading} size="lg">
                     Reset Password
+                    {!loading && <ArrowRight size={16} />}
                   </Button>
                 </div>
               </form>
             </>
           )}
 
+          {/* ── Step: Success ─────────────────────────────────────────────── */}
           {step === "success" && (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div
@@ -419,6 +470,8 @@ const ForgotPasswordPage = () => {
                 }}
               >
                 Your password has been reset successfully.
+                <br />
+                You can now sign in with your new password.
               </p>
               <Button onClick={() => navigate("/login")} fullWidth size="lg">
                 Go to Login <ArrowRight size={16} />
@@ -430,30 +483,5 @@ const ForgotPasswordPage = () => {
     </div>
   );
 };
-
-const ErrorBox = ({ c, message }) => (
-  <div
-    style={{
-      background: c.dangerLight,
-      border: `1px solid ${c.danger}40`,
-      borderLeft: `4px solid ${c.danger}`,
-      borderRadius: "10px",
-      padding: "12px 14px",
-      marginBottom: "16px",
-    }}
-  >
-    <p
-      style={{
-        fontSize: "13px",
-        color: c.danger,
-        margin: 0,
-        fontWeight: 600,
-        lineHeight: 1.5,
-      }}
-    >
-      {message}
-    </p>
-  </div>
-);
 
 export default ForgotPasswordPage;

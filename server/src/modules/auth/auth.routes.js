@@ -8,76 +8,17 @@ const {
   refreshTokenLimiter,
 } = require("../../middleware/rateLimiter");
 const validate = require("../../middleware/validate");
-const { body } = require("express-validator");
+const {
+  registerValidator,
+  loginValidator,
+  refreshTokenValidator,
+  changePasswordValidator,
+  resetRequestValidator,
+  resetConfirmValidator,
+  deleteAccountValidator,
+} = require("./auth.validators");
 
-// ─── Validators ──
-
-const registerValidator = [
-  body("fullName")
-    .trim()
-    .notEmpty()
-    .isLength({ min: 2, max: 100 })
-    .matches(/^[a-zA-Z\s'\-.]+$/),
-  body("username")
-    .trim()
-    .notEmpty()
-    .isLength({ min: 3, max: 30 })
-    .matches(/^[a-zA-Z0-9_]+$/)
-    .toLowerCase(),
-  body("email").trim().notEmpty().isEmail().normalizeEmail(),
-  body("password")
-    .notEmpty()
-    .isLength({ min: 8 })
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
-  body("securityQuestion")
-    .trim()
-    .notEmpty()
-    .withMessage("Security question is required")
-    .isLength({ min: 5, max: 255 }),
-  body("securityAnswer")
-    .trim()
-    .notEmpty()
-    .withMessage("Security answer is required")
-    .isLength({ min: 2, max: 100 }),
-  body("bio").optional().trim().isLength({ max: 300 }),
-];
-
-const loginValidator = [
-  body("identifier").trim().notEmpty(),
-  body("password").notEmpty(),
-];
-
-const resetRequestValidator = [
-  body("email").trim().notEmpty().isEmail().normalizeEmail(),
-];
-
-const resetConfirmValidator = [
-  body("email").trim().notEmpty().isEmail().normalizeEmail(),
-  body("securityAnswer").trim().notEmpty(),
-  body("newPassword")
-    .notEmpty()
-    .isLength({ min: 8 })
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
-];
-
-const deleteAccountValidator = [
-  body("securityAnswer")
-    .trim()
-    .notEmpty()
-    .withMessage("Security answer is required"),
-];
-
-const changePasswordValidator = [
-  body("currentPassword").notEmpty(),
-  body("newPassword")
-    .notEmpty()
-    .isLength({ min: 8 })
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
-];
-
-const refreshValidator = [body("refreshToken").notEmpty()];
-
-// ─── Public Routes ──
+/* ─── Public Routes ──────────────────────────────────────────────────────── */
 
 router.post(
   "/register",
@@ -92,14 +33,14 @@ router.post("/login", authLimiter, loginValidator, validate, controller.login);
 router.post(
   "/refresh",
   refreshTokenLimiter,
-  refreshValidator,
+  refreshTokenValidator,
   validate,
   controller.refresh,
 );
 
 router.post("/logout", controller.logout);
 
-// Password reset (security question)
+// Password reset via security question
 router.post(
   "/password-reset/question",
   authLimiter,
@@ -116,7 +57,7 @@ router.post(
   controller.resetPassword,
 );
 
-// ─── Protected Routes ──
+/* ─── Protected Routes ───────────────────────────────────────────────────── */
 
 router.get("/me", authenticate, controller.getMe);
 

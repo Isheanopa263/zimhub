@@ -27,6 +27,8 @@ const createNoticeValidator = [
     .matches(/^[+\d\s\-()]{7,20}$/)
     .withMessage("Invalid WhatsApp number format"),
 
+  // emailAddress kept as optional contact field on notices
+  // (this is a notice contact field, not user email)
   body("emailAddress")
     .optional({ checkFalsy: true })
     .trim()

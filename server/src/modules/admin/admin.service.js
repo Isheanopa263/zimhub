@@ -6,11 +6,7 @@ const { remember, invalidate } = require("../../utils/cache");
 
 /* ─── DASHBOARD STATISTICS ───────────────────────────────────────────────── */
 
-/**
- * Get comprehensive dashboard stats
- */
 const getDashboardStats = async () => {
-  // Run all counts in parallel
   return remember("admin:dashboard", 30, async () => {
     const [
       usersResult,
@@ -25,120 +21,143 @@ const getDashboardStats = async () => {
     ] = await Promise.all([
       // Total users + breakdown
       query(`
-      SELECT 
-        COUNT(*)::int AS total,
-        COUNT(*) FILTER (WHERE role = 'admin')::int AS admins,
-        COUNT(*) FILTER (WHERE role = 'student')::int AS students,
-        COUNT(*) FILTER (WHERE is_suspended = true)::int AS suspended,
-        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int AS new_this_week,
-        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')::int AS new_this_month
-      FROM users
-    `),
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE role = 'admin')::int AS admins,
+          COUNT(*) FILTER (WHERE role = 'student')::int AS students,
+          COUNT(*) FILTER (WHERE is_suspended = true)::int AS suspended,
+          COUNT(*) FILTER (
+            WHERE created_at >= NOW() - INTERVAL '7 days'
+          )::int AS new_this_week,
+          COUNT(*) FILTER (
+            WHERE created_at >= NOW() - INTERVAL '30 days'
+          )::int AS new_this_month
+        FROM users
+      `),
 
       // Total posts
       query(`
-      SELECT
-        COUNT(*)::int AS total,
-        COUNT(*) FILTER (WHERE is_deleted = false)::int AS active,
-        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days' AND is_deleted = false)::int AS this_week,
-        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours' AND is_deleted = false)::int AS today
-      FROM posts
-    `),
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE is_deleted = false)::int AS active,
+          COUNT(*) FILTER (
+            WHERE created_at >= NOW() - INTERVAL '7 days'
+            AND is_deleted = false
+          )::int AS this_week,
+          COUNT(*) FILTER (
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+            AND is_deleted = false
+          )::int AS today
+        FROM posts
+      `),
 
       // Total notices
       query(`
-      SELECT
-        COUNT(*)::int AS total,
-        COUNT(*) FILTER (WHERE status = 'active')::int AS active,
-        COUNT(*) FILTER (WHERE status = 'closed')::int AS closed,
-        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int AS this_week
-      FROM notices
-    `),
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE status = 'active')::int AS active,
+          COUNT(*) FILTER (WHERE status = 'closed')::int AS closed,
+          COUNT(*) FILTER (
+            WHERE created_at >= NOW() - INTERVAL '7 days'
+          )::int AS this_week
+        FROM notices
+      `),
 
       // Comments
       query(`
-      SELECT
-        COUNT(*) FILTER (WHERE is_deleted = false)::int AS active,
-        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours' AND is_deleted = false)::int AS today
-      FROM comments
-    `),
+        SELECT
+          COUNT(*) FILTER (WHERE is_deleted = false)::int AS active,
+          COUNT(*) FILTER (
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+            AND is_deleted = false
+          )::int AS today
+        FROM comments
+      `),
 
       // Likes
       query(`SELECT COUNT(*)::int AS total FROM likes`),
 
-      // Recent users (last 5)
+      // Recent users (last 5) — no email
       query(`
-      SELECT 
-        u.id, u.username, u.role, u.created_at, u.is_suspended,
-        p.full_name, p.avatar_url
-      FROM users u
-      LEFT JOIN profiles p ON p.user_id = u.id
-      ORDER BY u.created_at DESC
-      LIMIT 5
-    `),
+        SELECT
+          u.id, u.username, u.role,
+          u.created_at, u.is_suspended,
+          p.full_name, p.avatar_url
+        FROM users u
+        LEFT JOIN profiles p ON p.user_id = u.id
+        ORDER BY u.created_at DESC
+        LIMIT 5
+      `),
 
       // Recent activity feed (last 10 events)
       query(`
-      (
-        SELECT 'post' AS type, p.id, p.created_at,
-               u.username, pr.full_name,
-               p.post_type AS detail
-        FROM posts p
-        JOIN users u ON u.id = p.user_id
-        LEFT JOIN profiles pr ON pr.user_id = p.user_id
-        WHERE p.is_deleted = false
-        ORDER BY p.created_at DESC
-        LIMIT 5
-      )
-      UNION ALL
-      (
-        SELECT 'notice' AS type, n.id, n.created_at,
-               u.username, pr.full_name,
-               n.title AS detail
-        FROM notices n
-        JOIN users u ON u.id = n.user_id
-        LEFT JOIN profiles pr ON pr.user_id = n.user_id
-        ORDER BY n.created_at DESC
-        LIMIT 5
-      )
-      UNION ALL
-      (
-        SELECT 'user' AS type, u.id, u.created_at,
-               u.username, pr.full_name,
-               'joined' AS detail
-        FROM users u
-        LEFT JOIN profiles pr ON pr.user_id = u.id
-        ORDER BY u.created_at DESC
-        LIMIT 5
-      )
-      ORDER BY created_at DESC
-      LIMIT 10
-    `),
+        (
+          SELECT 'post' AS type, p.id, p.created_at,
+                 u.username, pr.full_name,
+                 p.post_type AS detail
+          FROM posts p
+          JOIN users u ON u.id = p.user_id
+          LEFT JOIN profiles pr ON pr.user_id = p.user_id
+          WHERE p.is_deleted = false
+          ORDER BY p.created_at DESC
+          LIMIT 5
+        )
+        UNION ALL
+        (
+          SELECT 'notice' AS type, n.id, n.created_at,
+                 u.username, pr.full_name,
+                 n.title AS detail
+          FROM notices n
+          JOIN users u ON u.id = n.user_id
+          LEFT JOIN profiles pr ON pr.user_id = n.user_id
+          ORDER BY n.created_at DESC
+          LIMIT 5
+        )
+        UNION ALL
+        (
+          SELECT 'user' AS type, u.id, u.created_at,
+                 u.username, pr.full_name,
+                 'joined' AS detail
+          FROM users u
+          LEFT JOIN profiles pr ON pr.user_id = u.id
+          ORDER BY u.created_at DESC
+          LIMIT 5
+        )
+        ORDER BY created_at DESC
+        LIMIT 10
+      `),
 
       // Posts by type breakdown
       query(`
-      SELECT post_type, COUNT(*)::int AS count
-      FROM posts
-      WHERE is_deleted = false
-      GROUP BY post_type
-    `),
+        SELECT post_type, COUNT(*)::int AS count
+        FROM posts
+        WHERE is_deleted = false
+        GROUP BY post_type
+      `),
 
       // Daily growth — last 7 days
       query(`
-      WITH days AS (
-        SELECT generate_series(
-          NOW() - INTERVAL '6 days',
-          NOW(),
-          '1 day'::interval
-        )::date AS day
-      )
-      SELECT 
-        days.day,
-        (SELECT COUNT(*)::int FROM users WHERE DATE(created_at) = days.day) AS users,
-        (SELECT COUNT(*)::int FROM posts WHERE DATE(created_at) = days.day AND is_deleted = false) AS posts
-      FROM days
-      ORDER BY days.day ASC
-    `),
+        WITH days AS (
+          SELECT generate_series(
+            NOW() - INTERVAL '6 days',
+            NOW(),
+            '1 day'::interval
+          )::date AS day
+        )
+        SELECT
+          days.day,
+          (
+            SELECT COUNT(*)::int FROM users
+            WHERE DATE(created_at) = days.day
+          ) AS users,
+          (
+            SELECT COUNT(*)::int FROM posts
+            WHERE DATE(created_at) = days.day
+            AND is_deleted = false
+          ) AS posts
+        FROM days
+        ORDER BY days.day ASC
+      `),
     ]);
 
     // Format posts by type into object
@@ -150,7 +169,7 @@ const getDashboardStats = async () => {
       { video: 0, image: 0, text: 0, link: 0 },
     );
 
-    // Format recent users
+    // Format recent users — no email
     const recentUsers = recentUsersResult.rows.map((u) => ({
       id: u.id,
       username: u.username,
@@ -191,24 +210,11 @@ const getDashboardStats = async () => {
       recentActivity: activity,
       growth,
     };
-    return {
-      users,
-      posts,
-      notices,
-      comments,
-      likes,
-      recentUsers,
-      recentActivity,
-      growth,
-    };
   });
 };
 
-/* ─── USER MANAGEMENT ─────────────────────────────────────────────────────── */
+/* ─── USER MANAGEMENT ────────────────────────────────────────────────────── */
 
-/**
- * Get all users with filters
- */
 const getUsers = async ({
   page = 1,
   limit = 20,
@@ -222,8 +228,10 @@ const getUsers = async ({
 
   if (search?.trim()) {
     params.push(`%${search.trim()}%`);
+    // Search by username or full name only — no email
     conditions.push(
-      `(u.username ILIKE $${params.length} OR p.full_name ILIKE $${params.length} OR u.email ILIKE $${params.length})`,
+      `(u.username ILIKE $${params.length}
+        OR p.full_name ILIKE $${params.length})`,
     );
   }
 
@@ -242,43 +250,41 @@ const getUsers = async ({
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Count
-  const countQuery = `
-    SELECT COUNT(*) FROM users u
-    LEFT JOIN profiles p ON p.user_id = u.id
-    ${whereClause}
-  `;
-  const countResult = await query(countQuery, params);
+  const countResult = await query(
+    `SELECT COUNT(*) FROM users u
+     LEFT JOIN profiles p ON p.user_id = u.id
+     ${whereClause}`,
+    params,
+  );
   const total = parseInt(countResult.rows[0].count);
 
-  // Data
+  // Data — no email selected
   params.push(limit, offset);
-  const dataQuery = `
-    SELECT 
-      u.id, u.username, u.email, u.role, u.is_suspended, 
-      u.is_verified, u.created_at,
-      p.full_name, p.bio, p.avatar_url,
-      COUNT(DISTINCT po.id) FILTER (WHERE po.is_deleted = false)::int AS post_count,
-      COUNT(DISTINCT n.id)::int AS notice_count
-    FROM users u
-    LEFT JOIN profiles p ON p.user_id = u.id
-    LEFT JOIN posts po ON po.user_id = u.id
-    LEFT JOIN notices n ON n.user_id = u.id
-    ${whereClause}
-    GROUP BY u.id, p.full_name, p.bio, p.avatar_url
-    ORDER BY u.created_at DESC
-    LIMIT $${params.length - 1} OFFSET $${params.length}
-  `;
-
-  const result = await query(dataQuery, params);
+  const result = await query(
+    `SELECT
+        u.id, u.username, u.role,
+        u.is_suspended, u.created_at,
+        p.full_name, p.bio, p.avatar_url,
+        COUNT(DISTINCT po.id)
+          FILTER (WHERE po.is_deleted = false)::int AS post_count,
+        COUNT(DISTINCT n.id)::int AS notice_count
+     FROM users u
+     LEFT JOIN profiles p ON p.user_id = u.id
+     LEFT JOIN posts po ON po.user_id = u.id
+     LEFT JOIN notices n ON n.user_id = u.id
+     ${whereClause}
+     GROUP BY u.id, p.full_name, p.bio, p.avatar_url
+     ORDER BY u.created_at DESC
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params,
+  );
 
   return {
     users: result.rows.map((u) => ({
       id: u.id,
       username: u.username,
-      email: u.email,
       role: u.role,
       isSuspended: u.is_suspended,
-      isVerified: u.is_verified,
       fullName: u.full_name,
       bio: u.bio,
       avatarUrl: u.avatar_url ? getFileUrl(u.avatar_url, "avatars") : null,
@@ -290,9 +296,8 @@ const getUsers = async ({
   };
 };
 
-/**
- * Toggle user suspension
- */
+/* ─── SUSPENSION & ROLE ──────────────────────────────────────────────────── */
+
 const toggleSuspension = async (userId, adminId) => {
   if (userId === adminId) {
     throw ApiError.badRequest("You cannot suspend yourself");
@@ -326,9 +331,6 @@ const toggleSuspension = async (userId, adminId) => {
   return { isSuspended: newStatus };
 };
 
-/**
- * Change user role (promote/demote)
- */
 const changeUserRole = async (userId, adminId, newRole) => {
   if (userId === adminId) {
     throw ApiError.badRequest("You cannot change your own role");
@@ -339,7 +341,8 @@ const changeUserRole = async (userId, adminId, newRole) => {
   }
 
   const result = await query(
-    `UPDATE users SET role = $1 WHERE id = $2 RETURNING id, role`,
+    `UPDATE users SET role = $1 WHERE id = $2
+     RETURNING id, role`,
     [newRole, userId],
   );
 
@@ -350,17 +353,15 @@ const changeUserRole = async (userId, adminId, newRole) => {
   return result.rows[0];
 };
 
-/**
- * Delete user (cascades to all their content)
- */
 const deleteUser = async (userId, adminId) => {
   if (userId === adminId) {
     throw ApiError.badRequest("You cannot delete yourself");
   }
 
-  // Get user info first
+  // Get user info — no email
   const userResult = await query(
-    `SELECT u.id, u.role, p.avatar_url FROM users u
+    `SELECT u.id, u.role, p.avatar_url
+     FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
      WHERE u.id = $1`,
     [userId],
@@ -376,12 +377,15 @@ const deleteUser = async (userId, adminId) => {
 
   // Get all media files to delete
   const mediaResult = await query(
-    `SELECT 
-      (SELECT array_agg(image_url) FROM post_images pi 
-       JOIN posts p ON p.id = pi.post_id WHERE p.user_id = $1) AS images,
-      (SELECT array_agg(video_url) FROM post_videos pv 
-       JOIN posts p ON p.id = pv.post_id WHERE p.user_id = $1) AS videos,
-      (SELECT array_agg(poster_url) FROM notices WHERE user_id = $1) AS notice_posters`,
+    `SELECT
+      (SELECT array_agg(image_url) FROM post_images pi
+       JOIN posts p ON p.id = pi.post_id
+       WHERE p.user_id = $1) AS images,
+      (SELECT array_agg(video_url) FROM post_videos pv
+       JOIN posts p ON p.id = pv.post_id
+       WHERE p.user_id = $1) AS videos,
+      (SELECT array_agg(poster_url) FROM notices
+       WHERE user_id = $1) AS notice_posters`,
     [userId],
   );
 
@@ -401,18 +405,14 @@ const deleteUser = async (userId, adminId) => {
   return { deleted: true };
 };
 
-/* ─── CONTENT MODERATION ──────────────────────────────────────────────────── */
+/* ─── CONTENT MODERATION ─────────────────────────────────────────────────── */
 
-/**
- * Get all posts for moderation (including deleted)
- */
 const getAllPostsForModeration = async ({
   page = 1,
   limit = 20,
   includeDeleted = false,
 }) => {
   const offset = (page - 1) * limit;
-
   const whereClause = includeDeleted ? "" : "WHERE p.is_deleted = false";
 
   const countResult = await query(
@@ -421,41 +421,44 @@ const getAllPostsForModeration = async ({
   const total = parseInt(countResult.rows[0].count);
 
   const result = await query(
-    `SELECT 
-      p.id, p.post_type, p.caption, p.is_deleted, p.created_at,
-      u.id AS user_id, u.username,
-      pr.full_name, pr.avatar_url,
-      pt.content AS text_content,
-      pv.video_url,
-      pl.title AS link_title, pl.url AS link_url,
-      
-      -- Get FIRST image only (for preview) using subquery — no duplication
-      (
-        SELECT image_url FROM post_images
-        WHERE post_id = p.id
-        ORDER BY display_order ASC
-        LIMIT 1
-      ) AS image_url,
-      
-      -- Count images for badge
-      (
-        SELECT COUNT(*)::int FROM post_images
-        WHERE post_id = p.id
-      ) AS image_count,
-      
-      COALESCE(lc.like_count, 0)::int AS like_count,
-      COALESCE(cc.comment_count, 0)::int AS comment_count
-    FROM posts p
-    JOIN users u ON u.id = p.user_id
-    LEFT JOIN profiles pr ON pr.user_id = p.user_id
-    LEFT JOIN post_text_posts pt ON pt.post_id = p.id
-    LEFT JOIN post_videos pv ON pv.post_id = p.id
-    LEFT JOIN post_links pl ON pl.post_id = p.id
-    LEFT JOIN (SELECT post_id, COUNT(*) AS like_count FROM likes GROUP BY post_id) lc ON lc.post_id = p.id
-    LEFT JOIN (SELECT post_id, COUNT(*) AS comment_count FROM comments WHERE is_deleted = false GROUP BY post_id) cc ON cc.post_id = p.id
-    ${whereClause}
-    ORDER BY p.created_at DESC
-    LIMIT $1 OFFSET $2`,
+    `SELECT
+        p.id, p.post_type, p.caption,
+        p.is_deleted, p.created_at,
+        u.id AS user_id, u.username,
+        pr.full_name, pr.avatar_url,
+        pt.content AS text_content,
+        pv.video_url,
+        pl.title AS link_title, pl.url AS link_url,
+        (
+          SELECT image_url FROM post_images
+          WHERE post_id = p.id
+          ORDER BY display_order ASC
+          LIMIT 1
+        ) AS image_url,
+        (
+          SELECT COUNT(*)::int FROM post_images
+          WHERE post_id = p.id
+        ) AS image_count,
+        COALESCE(lc.like_count, 0)::int AS like_count,
+        COALESCE(cc.comment_count, 0)::int AS comment_count
+     FROM posts p
+     JOIN users u ON u.id = p.user_id
+     LEFT JOIN profiles pr ON pr.user_id = p.user_id
+     LEFT JOIN post_text_posts pt ON pt.post_id = p.id
+     LEFT JOIN post_videos pv ON pv.post_id = p.id
+     LEFT JOIN post_links pl ON pl.post_id = p.id
+     LEFT JOIN (
+       SELECT post_id, COUNT(*) AS like_count
+       FROM likes GROUP BY post_id
+     ) lc ON lc.post_id = p.id
+     LEFT JOIN (
+       SELECT post_id, COUNT(*) AS comment_count
+       FROM comments WHERE is_deleted = false
+       GROUP BY post_id
+     ) cc ON cc.post_id = p.id
+     ${whereClause}
+     ORDER BY p.created_at DESC
+     LIMIT $1 OFFSET $2`,
     [limit, offset],
   );
 
@@ -475,7 +478,7 @@ const getAllPostsForModeration = async ({
       preview: {
         text: p.text_content,
         image: p.image_url ? getFileUrl(p.image_url, "images") : null,
-        imageCount: p.image_count || 0, // ← New: show "5 images" badge
+        imageCount: p.image_count || 0,
         video: p.video_url ? getFileUrl(p.video_url, "videos") : null,
         linkTitle: p.link_title,
         linkUrl: p.link_url,
@@ -489,9 +492,6 @@ const getAllPostsForModeration = async ({
   };
 };
 
-/**
- * Get all notices for moderation
- */
 const getAllNoticesForModeration = async ({ page = 1, limit = 20 }) => {
   const offset = (page - 1) * limit;
 
@@ -499,15 +499,16 @@ const getAllNoticesForModeration = async ({ page = 1, limit = 20 }) => {
   const total = parseInt(countResult.rows[0].count);
 
   const result = await query(
-    `SELECT 
-      n.id, n.title, n.description, n.poster_url, n.status, n.created_at,
-      u.id AS user_id, u.username,
-      p.full_name, p.avatar_url
-    FROM notices n
-    JOIN users u ON u.id = n.user_id
-    LEFT JOIN profiles p ON p.user_id = n.user_id
-    ORDER BY n.created_at DESC
-    LIMIT $1 OFFSET $2`,
+    `SELECT
+        n.id, n.title, n.description,
+        n.poster_url, n.status, n.created_at,
+        u.id AS user_id, u.username,
+        p.full_name, p.avatar_url
+     FROM notices n
+     JOIN users u ON u.id = n.user_id
+     LEFT JOIN profiles p ON p.user_id = n.user_id
+     ORDER BY n.created_at DESC
+     LIMIT $1 OFFSET $2`,
     [limit, offset],
   );
 
@@ -530,7 +531,7 @@ const getAllNoticesForModeration = async ({ page = 1, limit = 20 }) => {
   };
 };
 
-/* ─── ANNOUNCEMENTS MANAGEMENT ────────────────────────────────────────────── */
+/* ─── ANNOUNCEMENTS ──────────────────────────────────────────────────────── */
 
 const getAllAnnouncements = async ({ page = 1, limit = 20 }) => {
   const offset = (page - 1) * limit;
@@ -539,15 +540,16 @@ const getAllAnnouncements = async ({ page = 1, limit = 20 }) => {
   const total = parseInt(countResult.rows[0].count);
 
   const result = await query(
-    `SELECT 
-      a.id, a.title, a.content, a.is_active, a.created_at, a.updated_at,
-      u.id AS user_id, u.username,
-      p.full_name
-    FROM announcements a
-    JOIN users u ON u.id = a.user_id
-    LEFT JOIN profiles p ON p.user_id = a.user_id
-    ORDER BY a.created_at DESC
-    LIMIT $1 OFFSET $2`,
+    `SELECT
+        a.id, a.title, a.content,
+        a.is_active, a.created_at, a.updated_at,
+        u.id AS user_id, u.username,
+        p.full_name
+     FROM announcements a
+     JOIN users u ON u.id = a.user_id
+     LEFT JOIN profiles p ON p.user_id = a.user_id
+     ORDER BY a.created_at DESC
+     LIMIT $1 OFFSET $2`,
     [limit, offset],
   );
 
@@ -609,7 +611,8 @@ const updateAnnouncement = async (id, { title, content, isActive }) => {
 
   params.push(id);
   const result = await query(
-    `UPDATE announcements SET ${updates.join(", ")} 
+    `UPDATE announcements
+     SET ${updates.join(", ")}
      WHERE id = $${params.length}
      RETURNING id, title, content, is_active, updated_at`,
     params,
@@ -638,7 +641,8 @@ const deleteAnnouncement = async (id) => {
 const broadcastAnnouncement = async (announcementId) => {
   // Get announcement
   const a = await query(
-    `SELECT title, content FROM announcements WHERE id = $1 AND is_active = true`,
+    `SELECT title, content FROM announcements
+     WHERE id = $1 AND is_active = true`,
     [announcementId],
   );
 
@@ -648,6 +652,10 @@ const broadcastAnnouncement = async (announcementId) => {
 
   // Get all active users
   const users = await query(`SELECT id FROM users WHERE is_suspended = false`);
+
+  if (users.rows.length === 0) {
+    return { recipientCount: 0 };
+  }
 
   // Create a notification for each user (batched)
   const values = users.rows
@@ -660,23 +668,21 @@ const broadcastAnnouncement = async (announcementId) => {
   const params = [];
   users.rows.forEach((u) => {
     params.push(
-      u.id, // user_id
-      "admin_announcement", // type
-      `📢 ${a.rows[0].title}`, // title
-      a.rows[0].content, // message
-      announcementId, // reference_id
-      "announcement", // reference_type
+      u.id,
+      "admin_announcement",
+      `📢 ${a.rows[0].title}`,
+      a.rows[0].content,
+      announcementId,
+      "announcement",
     );
   });
 
-  if (users.rows.length > 0) {
-    await query(
-      `INSERT INTO notifications 
-        (user_id, type, title, message, reference_id, reference_type)
-       VALUES ${values}`,
-      params,
-    );
-  }
+  await query(
+    `INSERT INTO notifications
+       (user_id, type, title, message, reference_id, reference_type)
+     VALUES ${values}`,
+    params,
+  );
 
   return { recipientCount: users.rows.length };
 };

@@ -70,11 +70,9 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-// ── Security Question Based ──
-
 const getSecurityQuestion = async (req, res, next) => {
   try {
-    const result = await authService.getSecurityQuestion(req.body.email);
+    const result = await authService.getSecurityQuestion(req.body.username);
     return ApiResponse.success(res, "Security question retrieved", result);
   } catch (error) {
     next(error);

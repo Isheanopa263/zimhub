@@ -20,15 +20,6 @@ const registerValidator = [
     .withMessage("Only letters, numbers and underscores")
     .toLowerCase(),
 
-  body("email")
-    .trim()
-    .notEmpty()
-    .withMessage("Email is required")
-    .isEmail()
-    .withMessage("Invalid email")
-    .normalizeEmail()
-    .toLowerCase(),
-
   body("password")
     .notEmpty()
     .withMessage("Password is required")
@@ -37,6 +28,20 @@ const registerValidator = [
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage("Must contain uppercase, lowercase and a number"),
 
+  body("securityQuestion")
+    .trim()
+    .notEmpty()
+    .withMessage("Security question is required")
+    .isLength({ min: 5, max: 255 })
+    .withMessage("Security question must be 5-255 characters"),
+
+  body("securityAnswer")
+    .trim()
+    .notEmpty()
+    .withMessage("Security answer is required")
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Answer must be 2-100 characters"),
+
   body("bio")
     .optional()
     .trim()
@@ -44,23 +49,8 @@ const registerValidator = [
     .withMessage("Bio cannot exceed 300 characters"),
 ];
 
-const verifyRegistrationValidator = [
-  ...registerValidator,
-  body("otp")
-    .trim()
-    .notEmpty()
-    .withMessage("OTP is required")
-    .isLength({ min: 6, max: 6 })
-    .withMessage("OTP must be 6 digits")
-    .matches(/^\d{6}$/)
-    .withMessage("OTP must be 6 digits"),
-];
-
 const loginValidator = [
-  body("identifier")
-    .trim()
-    .notEmpty()
-    .withMessage("Email or username is required"),
+  body("identifier").trim().notEmpty().withMessage("Username is required"),
 
   body("password").notEmpty().withMessage("Password is required"),
 ];
@@ -73,40 +63,6 @@ const changePasswordValidator = [
   body("currentPassword")
     .notEmpty()
     .withMessage("Current password is required"),
-  body("newPassword")
-    .notEmpty()
-    .withMessage("New password is required")
-    .isLength({ min: 8 })
-    .withMessage("Must be at least 8 characters")
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage("Must contain uppercase, lowercase and a number"),
-];
-
-const requestOTPValidator = [
-  body("email")
-    .trim()
-    .notEmpty()
-    .withMessage("Email is required")
-    .isEmail()
-    .withMessage("Invalid email")
-    .normalizeEmail(),
-];
-
-const resetPasswordValidator = [
-  body("email")
-    .trim()
-    .notEmpty()
-    .withMessage("Email is required")
-    .isEmail()
-    .withMessage("Invalid email")
-    .normalizeEmail(),
-
-  body("otp")
-    .trim()
-    .notEmpty()
-    .withMessage("OTP is required")
-    .matches(/^\d{6}$/)
-    .withMessage("OTP must be 6 digits"),
 
   body("newPassword")
     .notEmpty()
@@ -117,22 +73,40 @@ const resetPasswordValidator = [
     .withMessage("Must contain uppercase, lowercase and a number"),
 ];
 
-const confirmDeletionValidator = [
-  body("otp")
+const resetRequestValidator = [
+  body("username").trim().notEmpty().withMessage("Username is required"),
+];
+
+const resetConfirmValidator = [
+  body("username").trim().notEmpty().withMessage("Username is required"),
+
+  body("securityAnswer")
     .trim()
     .notEmpty()
-    .withMessage("OTP is required")
-    .matches(/^\d{6}$/)
-    .withMessage("OTP must be 6 digits"),
+    .withMessage("Security answer is required"),
+
+  body("newPassword")
+    .notEmpty()
+    .withMessage("New password is required")
+    .isLength({ min: 8 })
+    .withMessage("Must be at least 8 characters")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage("Must contain uppercase, lowercase and a number"),
+];
+
+const deleteAccountValidator = [
+  body("securityAnswer")
+    .trim()
+    .notEmpty()
+    .withMessage("Security answer is required"),
 ];
 
 module.exports = {
   registerValidator,
-  verifyRegistrationValidator,
   loginValidator,
   refreshTokenValidator,
   changePasswordValidator,
-  requestOTPValidator,
-  resetPasswordValidator,
-  confirmDeletionValidator,
+  resetRequestValidator,
+  resetConfirmValidator,
+  deleteAccountValidator,
 };

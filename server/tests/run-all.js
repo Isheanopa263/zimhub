@@ -23,7 +23,8 @@ const HEALTH_URL =
     "",
   ) + "/health";
 
-/* ─── State ───────────────────────────────────────────────────────────────── */
+/* ─── State ──────────────────────────────────────────────────────────────── */
+
 const state = {
   tokens: { admin: null, user1: null, user2: null },
   refreshTokens: {},
@@ -40,7 +41,8 @@ const state = {
 
 const results = { passed: 0, failed: 0, skipped: 0, errors: [] };
 
-/* ─── Utilities ───────────────────────────────────────────────────────────── */
+/* ─── Utilities ──────────────────────────────────────────────────────────── */
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const request = async (method, path, body = null, token = null) => {
@@ -96,7 +98,8 @@ const sub = (title) => {
   console.log(chalk.gray(`\n  ${title}`));
 };
 
-/* ─── Test image helpers ──────────────────────────────────────────────────── */
+/* ─── Test image helpers ─────────────────────────────────────────────────── */
+
 const createTestPNG = () => {
   const png = Buffer.from([
     0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
@@ -132,7 +135,7 @@ const testAuth = async () => {
 
   sub("Admin login");
   const adminLogin = await request("POST", "/auth/login", {
-    identifier: "admin@zimhub.ac.zw",
+    identifier: "admin",
     password: "Admin@1234",
   });
   assert("Admin login succeeds", adminLogin.ok);
@@ -146,9 +149,9 @@ const testAuth = async () => {
     state.users.admin = adminLogin.data.data.user;
   }
 
-  sub("Student login (email)");
+  sub("Student login (username)");
   const studentLogin = await request("POST", "/auth/login", {
-    identifier: "tendai@uni.ac.zw",
+    identifier: "tendai",
     password: "Student@1234",
   });
   assert("Student login succeeds", studentLogin.ok);
@@ -159,34 +162,34 @@ const testAuth = async () => {
     state.users.user1 = studentLogin.data.data.user;
   }
 
-  sub("Student login (username)");
+  sub("Second student login");
   const usernameLogin = await request("POST", "/auth/login", {
     identifier: "chidi_o",
     password: "Student@1234",
   });
-  assert("Username login works", usernameLogin.ok);
+  assert("Second student login works", usernameLogin.ok);
 
   if (usernameLogin.ok) {
     state.tokens.user2 = usernameLogin.data.data.accessToken;
     state.users.user2 = usernameLogin.data.data.user;
   }
 
-  sub("Case-insensitive login");
+  sub("Case-insensitive username login");
   const caseLogin = await request("POST", "/auth/login", {
-    identifier: "TENDAI@UNI.AC.ZW",
+    identifier: "TENDAI",
     password: "Student@1234",
   });
-  assert("Case-insensitive email works", caseLogin.ok);
+  assert("Case-insensitive username works", caseLogin.ok);
 
   sub("Invalid credentials");
   const wrongPass = await request("POST", "/auth/login", {
-    identifier: "tendai@uni.ac.zw",
+    identifier: "tendai",
     password: "wrongpassword",
   });
   assert("Wrong password → 401", !wrongPass.ok && wrongPass.status === 401);
 
   const wrongUser = await request("POST", "/auth/login", {
-    identifier: "nonexistent@user.com",
+    identifier: "nonexistentuser999",
     password: "anything",
   });
   assert("Non-existent user rejected", !wrongUser.ok);
@@ -196,6 +199,8 @@ const testAuth = async () => {
   assert("GET /auth/me works", me.ok);
   assert("Has profile", !!me.data?.data?.profile);
   assert("Has stats", me.data?.data?.stats !== undefined);
+  // No email should ever appear in any response
+  assert("No email in response", me.data?.data?.email === undefined);
 
   const noAuth = await request("GET", "/auth/me");
   assert("No token → 401", !noAuth.ok && noAuth.status === 401);
@@ -223,67 +228,115 @@ const testAuth = async () => {
   });
   assert("Bad refresh token rejected", !badRefresh.ok);
 
-  sub("OTP registration");
+  sub("Registration (username + security question — no email)");
   const ts = Date.now();
-  const otpReq = await request("POST", "/auth/register/request", {
+  const regRes = await request("POST", "/auth/register", {
     fullName: "Test User",
     username: `testuser_${ts}`,
-    email: `test_${ts}@example.com`,
     password: "TestPass@123",
-  });
-  assert("OTP request succeeds", otpReq.ok, `Status: ${otpReq.status}`);
-
-  sub("Duplicate prevention");
-  const dupEmail = await request("POST", "/auth/register/request", {
-    fullName: "Dup",
-    username: `dup_e_${ts}`,
-    email: "tendai@uni.ac.zw",
-    password: "TestPass@123",
+    securityQuestion: "What is your favorite color?",
+    securityAnswer: "blue",
   });
   assert(
-    "Duplicate email rejected",
-    !dupEmail.ok && (dupEmail.status === 409 || dupEmail.status === 429),
+    "Registration succeeds",
+    regRes.ok,
+    `Status: ${regRes.status} — ${JSON.stringify(regRes.data)}`,
+  );
+  assert("Returns access token on register", !!regRes.data?.data?.accessToken);
+  assert(
+    "Returns refresh token on register",
+    !!regRes.data?.data?.refreshToken,
+  );
+  assert(
+    "No email in register response",
+    regRes.data?.data?.user?.email === undefined,
   );
 
-  await sleep(1500);
+  sub("Registration validation");
+  const missingQ = await request("POST", "/auth/register", {
+    fullName: "Test User",
+    username: `testuser2_${ts}`,
+    password: "TestPass@123",
+    securityQuestion: "",
+    securityAnswer: "blue",
+  });
+  assert(
+    "Missing security question → 400",
+    !missingQ.ok && missingQ.status === 400,
+  );
 
-  if (state.users.user1?.username) {
-    const dupUser = await request("POST", "/auth/register/request", {
-      fullName: "Dup",
-      username: state.users.user1.username,
-      email: `unique_${ts}@example.com`,
-      password: "TestPass@123",
-    });
-    assert(
-      "Duplicate username rejected",
-      !dupUser.ok && (dupUser.status === 409 || dupUser.status === 429),
-    );
+  const missingA = await request("POST", "/auth/register", {
+    fullName: "Test User",
+    username: `testuser3_${ts}`,
+    password: "TestPass@123",
+    securityQuestion: "What is your favorite color?",
+    securityAnswer: "",
+  });
+  assert(
+    "Missing security answer → 400",
+    !missingA.ok && missingA.status === 400,
+  );
 
-    await sleep(1500);
-
-    const upperUser = await request("POST", "/auth/register/request", {
-      fullName: "Case",
-      username: state.users.user1.username.toUpperCase(),
-      email: `case_${ts}@example.com`,
-      password: "TestPass@123",
-    });
-    assert(
-      "Uppercase username variant rejected",
-      !upperUser.ok && (upperUser.status === 409 || upperUser.status === 429),
-    );
-  }
+  sub("Duplicate prevention");
+  const dupUser = await request("POST", "/auth/register", {
+    fullName: "Dup",
+    username: "tendai",
+    password: "TestPass@123",
+    securityQuestion: "What is your favorite color?",
+    securityAnswer: "blue",
+  });
+  assert("Duplicate username rejected", !dupUser.ok && dupUser.status === 409);
 
   await sleep(500);
-  sub("Password reset (enumeration protection)");
-  const resetOtp = await request("POST", "/auth/password-reset/request", {
-    email: "tendai@uni.ac.zw",
-  });
-  assert("Password reset OTP works", resetOtp.ok);
 
-  const fakeReset = await request("POST", "/auth/password-reset/request", {
-    email: "totally-fake@nobody.com",
+  const upperUser = await request("POST", "/auth/register", {
+    fullName: "Case",
+    username: "TENDAI",
+    password: "TestPass@123",
+    securityQuestion: "What is your favorite color?",
+    securityAnswer: "blue",
   });
-  assert("Non-existent email returns same response", fakeReset.ok);
+  assert(
+    "Uppercase username variant rejected",
+    !upperUser.ok && upperUser.status === 409,
+  );
+
+  sub("Password reset via security question (username-based)");
+
+  const getQ = await request("POST", "/auth/password-reset/question", {
+    username: "tendai",
+  });
+  assert("Get security question works", getQ.ok);
+  assert(
+    "Returns a question string",
+    typeof getQ.data?.data?.question === "string" &&
+      getQ.data.data.question.length > 0,
+  );
+
+  const fakeQ = await request("POST", "/auth/password-reset/question", {
+    username: "totallyfakeuser999xyz",
+  });
+  assert(
+    "Non-existent username still returns a question (enumeration safe)",
+    fakeQ.ok && typeof fakeQ.data?.data?.question === "string",
+  );
+
+  const wrongAnswer = await request("POST", "/auth/password-reset/confirm", {
+    username: "tendai",
+    securityAnswer: "definitelywronganswerxyz",
+    newPassword: "NewPass@123",
+  });
+  assert(
+    "Wrong security answer → 400",
+    !wrongAnswer.ok && wrongAnswer.status === 400,
+  );
+
+  const weakPass = await request("POST", "/auth/password-reset/confirm", {
+    username: "tendai",
+    securityAnswer: "blue",
+    newPassword: "weak",
+  });
+  assert("Weak new password → 400", !weakPass.ok && weakPass.status === 400);
 };
 
 /* 3. SECURITY */
@@ -293,7 +346,6 @@ const testSecurity = async () => {
   sub("Refresh token rate limit");
   let blocked = false;
 
-  // Use a unique fake token pattern so rate limit key is isolated
   const fakeToken = `fake.security.test.${Date.now()}`;
 
   for (let i = 0; i < 35; i++) {
@@ -307,8 +359,6 @@ const testSecurity = async () => {
   }
   assert("Refresh endpoint rate-limited", blocked);
 
-  // Generous wait to let rate limit window cool down
-  // This prevents interference with subsequent test runs
   await sleep(5000);
 };
 
@@ -326,10 +376,14 @@ const testProfiles = async () => {
     state.tokens.user1,
   );
   assert("Get own profile", own.ok);
-  assert("Shows email", !!own.data?.data?.email);
+  // No email — not stored anywhere
+  assert(
+    "No email on own profile",
+    own.data?.data?.email === undefined || own.data?.data?.email === null,
+  );
   assert("isOwnProfile = true", own.data?.data?.isOwnProfile === true);
 
-  sub("Other profile (privacy)");
+  sub("Other profile");
   const other = await request(
     "GET",
     `/users/${state.users.user2.username}`,
@@ -337,7 +391,11 @@ const testProfiles = async () => {
     state.tokens.user1,
   );
   assert("Get other profile", other.ok);
-  assert("Hides email", other.data?.data?.email === null);
+  // No email on any profile
+  assert(
+    "No email on other profile",
+    other.data?.data?.email === undefined || other.data?.data?.email === null,
+  );
   assert("isOwnProfile = false", other.data?.data?.isOwnProfile === false);
 
   sub("Non-existent profile");
@@ -555,7 +613,6 @@ const testPolls = async () => {
         "User votes tracked",
         vote.data?.data?.poll?.userVotes?.length > 0,
       );
-
       const winningOption = vote.data?.data?.poll?.options?.find(
         (o) => o.id === state.pollOptionIds[0],
       );
@@ -615,10 +672,7 @@ const testPolls = async () => {
   const noOpts = await request(
     "POST",
     "/posts/poll",
-    {
-      question: "Bad poll",
-      options: ["Only one"],
-    },
+    { question: "Bad poll", options: ["Only one"] },
     state.tokens.user1,
   );
   assert("Less than 2 options → 400", !noOpts.ok && noOpts.status === 400);
@@ -637,10 +691,7 @@ const testPolls = async () => {
   const dups = await request(
     "POST",
     "/posts/poll",
-    {
-      question: "Dups",
-      options: ["Same", "Same"],
-    },
+    { question: "Dups", options: ["Same", "Same"] },
     state.tokens.user1,
   );
   assert("Duplicate options → 400", !dups.ok && dups.status === 400);
@@ -801,7 +852,10 @@ const testComments = async () => {
     const reply = await request(
       "POST",
       `/comments/posts/${state.posts.text}`,
-      { content: "Thanks!", parentCommentId: state.comments.main },
+      {
+        content: "Thanks!",
+        parentCommentId: state.comments.main,
+      },
       state.tokens.user1,
     );
     assert("Create reply", reply.ok);
@@ -865,7 +919,7 @@ const testNotices = async () => {
   fd.append("title", "Test Notice");
   fd.append("description", "Test notice description for automated tests");
   fd.append("phoneNumber", "+263 77 123 4567");
-  fd.append("emailAddress", "test@example.com");
+  // No emailAddress field — email is not part of the system
   const createRes = await fetch(`${BASE_URL}/notices`, {
     method: "POST",
     headers: { Authorization: `Bearer ${state.tokens.user1}` },
@@ -1015,7 +1069,9 @@ const testNotifications = async () => {
   await sleep(150);
   const oldPoll = await request(
     "GET",
-    `/notifications/poll?since=${new Date(Date.now() - 86400000).toISOString()}`,
+    `/notifications/poll?since=${new Date(
+      Date.now() - 86400000,
+    ).toISOString()}`,
     null,
     state.tokens.user1,
   );
@@ -1172,8 +1228,7 @@ const testSupport = async () => {
     "/support/suggestions",
     {
       category: "feature_idea",
-      content:
-        "Test suggestion from automated tests — no user info should be stored.",
+      content: "Test suggestion from automated tests — no user info stored.",
     },
     state.tokens.user2,
   );
@@ -1266,6 +1321,14 @@ const testAdmin = async () => {
   assert("Get users", users.ok);
   assert("Is array", Array.isArray(users.data?.data));
 
+  // Verify no email in admin user list
+  if (users.ok && users.data?.data?.length > 0) {
+    assert(
+      "No email in admin user list",
+      users.data.data.every((u) => u.email === undefined),
+    );
+  }
+
   const searchU = await request(
     "GET",
     "/admin/users?search=tendai",
@@ -1310,10 +1373,7 @@ const testAdmin = async () => {
   const newAnn = await request(
     "POST",
     "/admin/announcements",
-    {
-      title: "Test Announcement",
-      content: "Test content",
-    },
+    { title: "Test Announcement", content: "Test content" },
     state.tokens.admin,
   );
   assert("Create announcement", newAnn.ok);
@@ -1432,7 +1492,7 @@ const testRateLimits = async (quick) => {
   let authBlocked = false;
   for (let i = 0; i < 20; i++) {
     const res = await request("POST", "/auth/login", {
-      identifier: "ratelimit@test.com",
+      identifier: "fakeusername999",
       password: "wrong",
     });
     if (res.status === 429) {
