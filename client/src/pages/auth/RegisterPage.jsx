@@ -290,7 +290,7 @@ const RegisterPage = () => {
                 label="Full Name"
                 name="fullName"
                 type="text"
-                placeholder="John Doe"
+                placeholder="Ghost Renyika"
                 icon={User}
                 error={errors.fullName?.message}
                 helperText="Can be a display name — ghost accounts allowed"
@@ -303,7 +303,7 @@ const RegisterPage = () => {
                 label="Username"
                 name="username"
                 type="text"
-                placeholder="e.g. john_doe"
+                placeholder="e.g. ghostrenyika"
                 icon={AtSign}
                 error={errors.username?.message}
                 helperText="Used to log in — can be a pseudonym"
