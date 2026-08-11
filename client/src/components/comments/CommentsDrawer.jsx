@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { X } from "lucide-react";
 import useComments from "../../hooks/useComments";
 import useTheme from "../../hooks/useTheme";
@@ -18,6 +18,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
     deleteComment,
   } = useComments(postId, isOpen);
 
+  /* Lock body scroll when drawer is open */
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => {
@@ -25,7 +26,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
     };
   }, [isOpen]);
 
-  // Update parent post card count from server total
+  /* Sync comment count back to PostCard */
   useEffect(() => {
     if (onCommentChange && totalCount >= 0) {
       onCommentChange(totalCount);
@@ -33,8 +34,10 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
   }, [totalCount, onCommentChange]);
 
   const handleSubmit = async (content) => await createComment(content, null);
+
   const handleReply = async (parentId, content) =>
     await createComment(content, parentId);
+
   const handleDelete = async (id, wasReply, parentId) =>
     await deleteComment(id, wasReply, parentId);
 
@@ -42,6 +45,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
 
   return (
     <>
+      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
@@ -54,6 +58,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
         }}
       />
 
+      {/* Drawer */}
       <div
         style={{
           position: "fixed",
@@ -71,6 +76,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           animation: "slideUp 0.3s ease",
         }}
       >
+        {/* Drag handle */}
         <div
           style={{
             width: "40px",
@@ -82,6 +88,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           }}
         />
 
+        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -99,13 +106,15 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
               color: c.text,
               margin: 0,
               fontFamily: "Inter, sans-serif",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
             }}
           >
             Comments
             {totalCount > 0 && (
               <span
                 style={{
-                  marginLeft: "8px",
                   fontSize: "14px",
                   fontWeight: 600,
                   color: c.textTer,
@@ -134,6 +143,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           </button>
         </div>
 
+        {/* Comments list */}
         <div style={{ flex: 1, overflow: "auto" }}>
           <CommentsList
             comments={comments}
@@ -145,6 +155,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           />
         </div>
 
+        {/* Comment input */}
         <CommentInput
           onSubmit={handleSubmit}
           submitting={submitting}
@@ -153,10 +164,13 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
       </div>
 
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
         @keyframes slideUp {
           from { transform: translateY(100%); }
-          to { transform: translateY(0); }
+          to   { transform: translateY(0); }
         }
       `}</style>
     </>

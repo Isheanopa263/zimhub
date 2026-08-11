@@ -10,6 +10,7 @@ const useComments = (postId, enabled = false) => {
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
 
+  /* Load top-level comments */
   const loadComments = useCallback(async () => {
     if (!postId || !enabled) return;
 
@@ -22,7 +23,6 @@ const useComments = (postId, enabled = false) => {
       setComments(response.data || []);
       setMeta(response.meta);
       setHasMore(response.meta?.hasNextPage || false);
-      // Use server total — includes all comments + replies
       setTotalCount(response.meta?.total || 0);
     } catch (error) {
       toast.error("Failed to load comments");
@@ -31,6 +31,7 @@ const useComments = (postId, enabled = false) => {
     }
   }, [postId, enabled]);
 
+  /* Load more top-level comments */
   const loadMore = async () => {
     if (!meta?.hasNextPage || loading) return;
 
@@ -50,6 +51,7 @@ const useComments = (postId, enabled = false) => {
     }
   };
 
+  /* Create top-level comment OR reply */
   const createComment = async (content, parentCommentId = null) => {
     if (!content?.trim()) return;
 
@@ -73,7 +75,7 @@ const useComments = (postId, enabled = false) => {
           ),
         );
       } else {
-        // Top-level comment — prepend to list
+        // Top-level comment — prepend to list and increment count
         setComments((prev) => [newComment, ...prev]);
         setTotalCount((prev) => prev + 1);
       }
@@ -87,6 +89,7 @@ const useComments = (postId, enabled = false) => {
     }
   };
 
+  /* Delete comment or reply */
   const deleteComment = async (
     commentId,
     wasReply = false,
@@ -100,12 +103,15 @@ const useComments = (postId, enabled = false) => {
         setComments((prev) =>
           prev.map((c) =>
             c.id === parentId
-              ? { ...c, replyCount: Math.max(0, (c.replyCount || 0) - 1) }
+              ? {
+                  ...c,
+                  replyCount: Math.max(0, (c.replyCount || 0) - 1),
+                }
               : c,
           ),
         );
       } else {
-        // Remove top-level comment
+        // Remove top-level comment and decrement count
         setComments((prev) => prev.filter((c) => c.id !== commentId));
         setTotalCount((prev) => Math.max(0, prev - 1));
       }
