@@ -55,7 +55,20 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
     likeCount,
     loading: likeLoading,
     toggleLike,
+    setIsLiked,
+    setLikeCount,
   } = useLike(post.isLiked || false, post.stats?.likes || 0);
+
+  /* Sync comment count when post prop updates */
+  useEffect(() => {
+    setCommentCount(post.stats?.comments || 0);
+  }, [post.id, post.stats?.comments]);
+
+  /* Sync like state when post prop updates */
+  useEffect(() => {
+    setIsLiked(post.isLiked || false);
+    setLikeCount(post.stats?.likes || 0);
+  }, [post.id, post.isLiked, post.stats?.likes, setIsLiked, setLikeCount]);
 
   const handleDoubleTap = () => {
     if (!isLiked && !likeLoading) toggleLike(post.id);
@@ -94,7 +107,7 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
         overflow: "hidden",
       }}
     >
-      {/* ── Full-Screen Content — fills entire area ── */}
+      {/* ── Full-Screen Content ── */}
       <div
         {...handlers}
         style={{
@@ -106,13 +119,12 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
       >
         <PostContent post={post} isActive={isActive} />
 
-        {/* Heart bursts */}
         {bursts.map((burst) => (
           <HeartBurst key={burst.id} id={burst.id} x={burst.x} y={burst.y} />
         ))}
       </div>
 
-      {/* ── Bottom Gradient Overlay (for readability) ── */}
+      {/* Bottom gradient overlay */}
       <div
         style={{
           position: "absolute",
@@ -127,7 +139,7 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
         }}
       />
 
-      {/* ── Bottom Info (Name + Username) ── */}
+      {/* Bottom info */}
       <div
         style={{
           position: "absolute",
@@ -139,7 +151,6 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
         }}
       >
         <div style={{ pointerEvents: "auto" }}>
-          {/* Author */}
           <div
             onClick={() => navigate(`/profile/${post.author?.username}`)}
             style={{ cursor: "pointer", marginBottom: "6px" }}
@@ -170,7 +181,6 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
             </p>
           </div>
 
-          {/* Caption */}
           {captionText && (
             <div
               onClick={() => setCaptionExpanded(!captionExpanded)}
@@ -209,7 +219,7 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
         </div>
       </div>
 
-      {/* ── Right Action Bar — overlays on top of content ── */}
+      {/* Right action bar */}
       <div
         style={{
           position: "absolute",
@@ -222,7 +232,6 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
           zIndex: 10,
         }}
       >
-        {/* Avatar */}
         <button
           onClick={() => navigate(`/profile/${post.author?.username}`)}
           style={{
@@ -261,7 +270,6 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
           )}
         </button>
 
-        {/* Like */}
         <ActionButton
           icon={
             <Heart
@@ -276,21 +284,18 @@ const ImmersivePost = ({ post, isActive, onDelete }) => {
           disabled={likeLoading}
         />
 
-        {/* Comment */}
         <ActionButton
           icon={<MessageCircle size={30} color="#ffffff" strokeWidth={2} />}
           label={commentCount}
           onClick={() => setCommentsOpen(true)}
         />
 
-        {/* Share */}
         <ActionButton
           icon={<Share2 size={28} color="#ffffff" strokeWidth={2} />}
           label="Share"
           onClick={handleShare}
         />
 
-        {/* Delete menu */}
         {canDelete && (
           <div style={{ position: "relative" }}>
             <ActionButton
@@ -472,7 +477,11 @@ const ImageContent = ({ post }) => {
       <img
         src={getImageUrl(images[current].url)}
         alt="Post"
-        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+        style={{
+          maxWidth: "100%",
+          maxHeight: "100%",
+          objectFit: "contain",
+        }}
       />
 
       {images.length > 1 && (
@@ -615,7 +624,11 @@ const VideoContent = ({ post, isActive }) => {
         muted={isMuted}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
-        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+        style={{
+          maxWidth: "100%",
+          maxHeight: "100%",
+          objectFit: "contain",
+        }}
       />
 
       {!isPlaying && (

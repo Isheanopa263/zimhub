@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PostAuthor from "./PostAuthor";
 import PostActions from "./PostActions";
 import TextPost from "./TextPost";
@@ -28,21 +28,28 @@ const PostCard = ({ post, onDelete }) => {
     setLikeCount,
   } = useLike(post.isLiked || false, post.stats?.likes || 0);
 
+  /* Sync comment count when post prop updates */
+  useEffect(() => {
+    setCommentCount(post.stats?.comments || 0);
+  }, [post.id, post.stats?.comments]);
+
+  /* Sync like state when post prop updates */
+  useEffect(() => {
+    setIsLiked(post.isLiked || false);
+    setLikeCount(post.stats?.likes || 0);
+  }, [post.id, post.isLiked, post.stats?.likes, setIsLiked, setLikeCount]);
+
   const handleLike = () => toggleLike(post.id);
 
   /**
-   * Double-tap handler:
-   * - Only LIKES (never unlikes) — to prevent accidental unlikes
-   * - Always shows the heart burst animation
+   * Double-tap only LIKES (never unlikes)
+   * Prevents accidental unlikes
    */
   const handleDoubleTap = () => {
     if (likeLoading) return;
-
-    // Only like if not already liked
     if (!isLiked) {
       toggleLike(post.id);
     }
-    // If already liked, just show the heart animation (don't unlike)
   };
 
   const { bursts, handlers } = useDoubleTap(handleDoubleTap);
@@ -110,7 +117,6 @@ const PostCard = ({ post, onDelete }) => {
       >
         <PostAuthor author={post.author} createdAt={post.createdAt} />
 
-        {/* Double-tap wrapper around content */}
         <div
           {...handlers}
           style={{
@@ -123,7 +129,6 @@ const PostCard = ({ post, onDelete }) => {
         >
           {renderContent()}
 
-          {/* Floating heart bursts */}
           {bursts.map((burst) => (
             <HeartBurst key={burst.id} id={burst.id} x={burst.x} y={burst.y} />
           ))}
