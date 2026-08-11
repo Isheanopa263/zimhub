@@ -8,8 +8,8 @@ const useComments = (postId, enabled = false) => {
   const [submitting, setSubmitting] = useState(false);
   const [meta, setMeta] = useState(null);
   const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
-  /* Load top-level comments */
   const loadComments = useCallback(async () => {
     if (!postId || !enabled) return;
 
@@ -22,6 +22,8 @@ const useComments = (postId, enabled = false) => {
       setComments(response.data || []);
       setMeta(response.meta);
       setHasMore(response.meta?.hasNextPage || false);
+      // Use server total — includes all comments + replies
+      setTotalCount(response.meta?.total || 0);
     } catch (error) {
       toast.error("Failed to load comments");
     } finally {
@@ -29,7 +31,6 @@ const useComments = (postId, enabled = false) => {
     }
   }, [postId, enabled]);
 
-  /* Load more top-level comments */
   const loadMore = async () => {
     if (!meta?.hasNextPage || loading) return;
 
@@ -49,7 +50,6 @@ const useComments = (postId, enabled = false) => {
     }
   };
 
-  /* Create top-level comment OR reply */
   const createComment = async (content, parentCommentId = null) => {
     if (!content?.trim()) return;
 
@@ -64,7 +64,7 @@ const useComments = (postId, enabled = false) => {
       const newComment = response.data;
 
       if (parentCommentId) {
-        // Reply — increment reply count on parent
+        // Reply — increment reply count on parent comment
         setComments((prev) =>
           prev.map((c) =>
             c.id === newComment.parentCommentId
@@ -73,8 +73,9 @@ const useComments = (postId, enabled = false) => {
           ),
         );
       } else {
-        // Top-level — prepend
+        // Top-level comment — prepend to list
         setComments((prev) => [newComment, ...prev]);
+        setTotalCount((prev) => prev + 1);
       }
 
       return newComment;
@@ -86,7 +87,6 @@ const useComments = (postId, enabled = false) => {
     }
   };
 
-  /* Delete comment / reply */
   const deleteComment = async (
     commentId,
     wasReply = false,
@@ -96,7 +96,7 @@ const useComments = (postId, enabled = false) => {
       await commentsApi.delete(commentId);
 
       if (wasReply && parentId) {
-        // Decrement parent's reply count
+        // Decrement parent reply count
         setComments((prev) =>
           prev.map((c) =>
             c.id === parentId
@@ -107,6 +107,7 @@ const useComments = (postId, enabled = false) => {
       } else {
         // Remove top-level comment
         setComments((prev) => prev.filter((c) => c.id !== commentId));
+        setTotalCount((prev) => Math.max(0, prev - 1));
       }
 
       toast.success("Comment deleted");
@@ -125,6 +126,7 @@ const useComments = (postId, enabled = false) => {
     submitting,
     meta,
     hasMore,
+    totalCount,
     loadComments,
     loadMore,
     createComment,

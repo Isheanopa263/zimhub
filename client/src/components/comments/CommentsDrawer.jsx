@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import useComments from "../../hooks/useComments";
 import useTheme from "../../hooks/useTheme";
@@ -12,6 +12,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
     loading,
     submitting,
     hasMore,
+    totalCount,
     loadMore,
     createComment,
     deleteComment,
@@ -24,15 +25,12 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
     };
   }, [isOpen]);
 
+  // Update parent post card count from server total
   useEffect(() => {
-    if (onCommentChange) {
-      const total = comments.reduce(
-        (sum, x) => sum + 1 + (x.replyCount || 0),
-        0,
-      );
-      onCommentChange(total);
+    if (onCommentChange && totalCount >= 0) {
+      onCommentChange(totalCount);
     }
-  }, [comments, onCommentChange]);
+  }, [totalCount, onCommentChange]);
 
   const handleSubmit = async (content) => await createComment(content, null);
   const handleReply = async (parentId, content) =>
@@ -104,6 +102,18 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
             }}
           >
             Comments
+            {totalCount > 0 && (
+              <span
+                style={{
+                  marginLeft: "8px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: c.textTer,
+                }}
+              >
+                ({totalCount})
+              </span>
+            )}
           </h2>
           <button
             onClick={onClose}
