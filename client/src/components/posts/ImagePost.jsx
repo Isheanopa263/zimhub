@@ -3,21 +3,11 @@ import { ChevronLeft, ChevronRight, ZoomIn, X } from "lucide-react";
 import { getImageUrl } from "../../utils/media";
 import useTheme from "../../hooks/useTheme";
 
-/**
- * Smart image post — handles 1 image (single) OR multiple (carousel)
- *
- * @param {Object} props
- * @param {Array} props.images - Array of {url, fileSize, order} OR single {url}
- * @param {string} props.imageUrl - Backward compat for single image
- * @param {string} props.caption
- */
 const ImagePost = ({ images, imageUrl, caption }) => {
   const { c } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const scrollRef = useRef(null);
 
-  // Normalize input — always work with array
   const imageList = (() => {
     if (Array.isArray(images) && images.length > 0) return images;
     if (imageUrl) return [{ url: imageUrl }];
@@ -45,26 +35,66 @@ const ImagePost = ({ images, imageUrl, caption }) => {
     goToIndex(currentIndex + 1);
   };
 
-  /* ── Touch swipe support ── */
-  const touchStart = useRef(null);
-  const touchEnd = useRef(null);
+  /* ── Touch swipe support (horizontal-aware) ── */
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const touchEndX = useRef(null);
+  const touchEndY = useRef(null);
+  const isSwiping = useRef(false);
 
   const onTouchStart = (e) => {
-    touchEnd.current = null;
-    touchStart.current = e.targetTouches[0].clientX;
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchStartY.current = e.targetTouches[0].clientY;
+    touchEndX.current = null;
+    touchEndY.current = null;
+    isSwiping.current = false;
   };
 
   const onTouchMove = (e) => {
-    touchEnd.current = e.targetTouches[0].clientX;
+    if (!touchStartX.current) return;
+
+    const currentX = e.targetTouches[0].clientX;
+    const currentY = e.targetTouches[0].clientY;
+    const diffX = Math.abs(currentX - touchStartX.current);
+    const diffY = Math.abs(currentY - touchStartY.current);
+
+    // Once we detect horizontal intent, lock in swipe mode
+    // and prevent vertical scroll
+    if (!isSwiping.current && diffX > 10 && diffX > diffY) {
+      isSwiping.current = true;
+    }
+
+    if (isSwiping.current) {
+      // Prevent page scroll during horizontal swipe
+      e.preventDefault();
+      touchEndX.current = currentX;
+      touchEndY.current = currentY;
+    }
   };
 
   const onTouchEnd = () => {
-    if (!touchStart.current || !touchEnd.current) return;
-    const distance = touchStart.current - touchEnd.current;
+    if (!isSwiping.current || !touchStartX.current || !touchEndX.current) {
+      // Reset and ignore — was a scroll, not swipe
+      touchStartX.current = null;
+      touchStartY.current = null;
+      touchEndX.current = null;
+      touchEndY.current = null;
+      isSwiping.current = false;
+      return;
+    }
+
+    const distanceX = touchStartX.current - touchEndX.current;
     const minSwipe = 50;
 
-    if (distance > minSwipe) goNext();
-    if (distance < -minSwipe) goPrev();
+    if (distanceX > minSwipe) goNext();
+    if (distanceX < -minSwipe) goPrev();
+
+    // Reset
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchEndX.current = null;
+    touchEndY.current = null;
+    isSwiping.current = false;
   };
 
   /* ── Keyboard navigation (when lightbox open) ── */
@@ -79,6 +109,7 @@ const ImagePost = ({ images, imageUrl, caption }) => {
 
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
+    // eslint-disable-next-line
   }, [lightboxOpen, currentIndex]);
 
   return (
@@ -89,12 +120,12 @@ const ImagePost = ({ images, imageUrl, caption }) => {
           overflow: "hidden",
           background: c.skeletonBase,
           position: "relative",
+          touchAction: isCarousel ? "pan-y pinch-zoom" : "auto",
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Image counter pill */}
         {isCarousel && (
           <div
             style={{
@@ -110,13 +141,13 @@ const ImagePost = ({ images, imageUrl, caption }) => {
               fontFamily: "Inter, sans-serif",
               zIndex: 3,
               backdropFilter: "blur(8px)",
+              pointerEvents: "none",
             }}
           >
             {currentIndex + 1} / {imageList.length}
           </div>
         )}
 
-        {/* Zoom button */}
         <button
           onClick={() => setLightboxOpen(true)}
           style={{
@@ -141,7 +172,6 @@ const ImagePost = ({ images, imageUrl, caption }) => {
           <ZoomIn size={15} />
         </button>
 
-        {/* Carousel arrows */}
         {isCarousel && currentIndex > 0 && (
           <button
             onClick={goPrev}
@@ -208,14 +238,12 @@ const ImagePost = ({ images, imageUrl, caption }) => {
           </button>
         )}
 
-        {/* Image */}
         <CarouselImage
           src={getImageUrl(currentImage.url)}
           alt={caption || `Image ${currentIndex + 1}`}
           c={c}
         />
 
-        {/* Dot indicators */}
         {isCarousel && (
           <div
             style={{
@@ -254,7 +282,6 @@ const ImagePost = ({ images, imageUrl, caption }) => {
         )}
       </div>
 
-      {/* Lightbox modal */}
       {lightboxOpen && (
         <Lightbox
           images={imageList}
@@ -275,7 +302,6 @@ const CarouselImage = ({ src, alt, c }) => {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
-  // Reset state when src changes
   useEffect(() => {
     setLoaded(false);
     setError(false);
@@ -299,7 +325,12 @@ const CarouselImage = ({ src, alt, c }) => {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: loaded ? "auto" : "300px" }}>
+    <div
+      style={{
+        position: "relative",
+        minHeight: loaded ? "auto" : "300px",
+      }}
+    >
       {!loaded && (
         <div
           style={{
@@ -317,6 +348,7 @@ const CarouselImage = ({ src, alt, c }) => {
         alt={alt}
         loading="lazy"
         decoding="async"
+        draggable="false"
         onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
         style={{
@@ -326,6 +358,9 @@ const CarouselImage = ({ src, alt, c }) => {
           display: "block",
           opacity: loaded ? 1 : 0,
           transition: "opacity 0.3s ease",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          pointerEvents: "none",
         }}
       />
 
@@ -351,9 +386,51 @@ const Lightbox = ({
 }) => {
   const current = images[currentIndex];
 
+  /* Touch swipe support inside lightbox too */
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const isSwiping = useRef(false);
+
+  const onLightboxTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchStartY.current = e.targetTouches[0].clientY;
+    isSwiping.current = false;
+  };
+
+  const onLightboxTouchMove = (e) => {
+    if (!touchStartX.current) return;
+    const diffX = Math.abs(e.targetTouches[0].clientX - touchStartX.current);
+    const diffY = Math.abs(e.targetTouches[0].clientY - touchStartY.current);
+    if (!isSwiping.current && diffX > 10 && diffX > diffY) {
+      isSwiping.current = true;
+    }
+  };
+
+  const onLightboxTouchEnd = (e) => {
+    if (!isSwiping.current || !touchStartX.current) {
+      touchStartX.current = null;
+      touchStartY.current = null;
+      isSwiping.current = false;
+      return;
+    }
+    const endX = e.changedTouches[0].clientX;
+    const distance = touchStartX.current - endX;
+    const minSwipe = 50;
+
+    if (distance > minSwipe && currentIndex < images.length - 1) onNext();
+    if (distance < -minSwipe && currentIndex > 0) onPrev();
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+    isSwiping.current = false;
+  };
+
   return (
     <div
       onClick={onClose}
+      onTouchStart={onLightboxTouchStart}
+      onTouchMove={onLightboxTouchMove}
+      onTouchEnd={onLightboxTouchEnd}
       style={{
         position: "fixed",
         inset: 0,
@@ -366,7 +443,6 @@ const Lightbox = ({
         animation: "fadeIn 0.2s ease",
       }}
     >
-      {/* Close */}
       <button
         onClick={onClose}
         style={{
@@ -390,7 +466,6 @@ const Lightbox = ({
         <X size={20} />
       </button>
 
-      {/* Counter */}
       {images.length > 1 && (
         <div
           style={{
@@ -412,7 +487,6 @@ const Lightbox = ({
         </div>
       )}
 
-      {/* Prev */}
       {images.length > 1 && currentIndex > 0 && (
         <button
           onClick={(e) => {
@@ -441,7 +515,6 @@ const Lightbox = ({
         </button>
       )}
 
-      {/* Next */}
       {images.length > 1 && currentIndex < images.length - 1 && (
         <button
           onClick={(e) => {
@@ -470,20 +543,21 @@ const Lightbox = ({
         </button>
       )}
 
-      {/* Image */}
       <img
         src={getImageUrl(current.url)}
         alt={`Image ${currentIndex + 1}`}
         onClick={(e) => e.stopPropagation()}
+        draggable="false"
         style={{
           maxWidth: "100%",
           maxHeight: "90vh",
           objectFit: "contain",
           borderRadius: "8px",
+          userSelect: "none",
+          WebkitUserSelect: "none",
         }}
       />
 
-      {/* Thumbnails (if multiple) */}
       {images.length > 1 && (
         <div
           onClick={(e) => e.stopPropagation()}
@@ -522,6 +596,7 @@ const Lightbox = ({
               <img
                 src={getImageUrl(img.url)}
                 alt={`Thumb ${idx + 1}`}
+                draggable="false"
                 style={{
                   width: "100%",
                   height: "100%",
