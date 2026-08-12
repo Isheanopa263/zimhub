@@ -7,6 +7,7 @@ const ImagePost = ({ images, imageUrl, caption }) => {
   const { c } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
 
   const imageList = (() => {
     if (Array.isArray(images) && images.length > 0) return images;
@@ -19,7 +20,6 @@ const ImagePost = ({ images, imageUrl, caption }) => {
   const isCarousel = imageList.length > 1;
   const currentImage = imageList[currentIndex];
 
-  /* ── Carousel navigation ── */
   const goToIndex = (index) => {
     const clamped = Math.max(0, Math.min(index, imageList.length - 1));
     setCurrentIndex(clamped);
@@ -35,69 +35,91 @@ const ImagePost = ({ images, imageUrl, caption }) => {
     goToIndex(currentIndex + 1);
   };
 
-  /* ── Touch swipe support (horizontal-aware) ── */
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
-  const touchEndX = useRef(null);
-  const touchEndY = useRef(null);
-  const isSwiping = useRef(false);
+  /* ─── Unified swipe/drag handler (touch + mouse) ─── */
+  const startX = useRef(null);
+  const startY = useRef(null);
+  const isDragging = useRef(false);
+  const hasMoved = useRef(false);
 
-  const onTouchStart = (e) => {
-    touchStartX.current = e.targetTouches[0].clientX;
-    touchStartY.current = e.targetTouches[0].clientY;
-    touchEndX.current = null;
-    touchEndY.current = null;
-    isSwiping.current = false;
+  const getX = (e) => {
+    if (e.touches?.[0]) return e.touches[0].clientX;
+    if (e.changedTouches?.[0]) return e.changedTouches[0].clientX;
+    return e.clientX;
   };
 
-  const onTouchMove = (e) => {
-    if (!touchStartX.current) return;
+  const getY = (e) => {
+    if (e.touches?.[0]) return e.touches[0].clientY;
+    if (e.changedTouches?.[0]) return e.changedTouches[0].clientY;
+    return e.clientY;
+  };
 
-    const currentX = e.targetTouches[0].clientX;
-    const currentY = e.targetTouches[0].clientY;
-    const diffX = Math.abs(currentX - touchStartX.current);
-    const diffY = Math.abs(currentY - touchStartY.current);
+  const onDragStart = (e) => {
+    if (!isCarousel) return;
+    startX.current = getX(e);
+    startY.current = getY(e);
+    isDragging.current = true;
+    hasMoved.current = false;
+  };
 
-    // Once we detect horizontal intent, lock in swipe mode
-    // and prevent vertical scroll
-    if (!isSwiping.current && diffX > 10 && diffX > diffY) {
-      isSwiping.current = true;
-    }
+  const onDragMove = (e) => {
+    if (!isDragging.current || startX.current === null) return;
 
-    if (isSwiping.current) {
-      // Prevent page scroll during horizontal swipe
-      e.preventDefault();
-      touchEndX.current = currentX;
-      touchEndY.current = currentY;
+    const currentX = getX(e);
+    const currentY = getY(e);
+    const diffX = currentX - startX.current;
+    const diffY = currentY - startY.current;
+    const absX = Math.abs(diffX);
+    const absY = Math.abs(diffY);
+
+    // Only track if horizontal intent detected
+    if (absX > 10 || hasMoved.current) {
+      if (absX > absY) {
+        hasMoved.current = true;
+        // Prevent page scroll during horizontal swipe
+        if (e.cancelable) e.preventDefault();
+        // Live drag offset for visual feedback
+        setDragOffset(diffX);
+      }
     }
   };
 
-  const onTouchEnd = () => {
-    if (!isSwiping.current || !touchStartX.current || !touchEndX.current) {
-      // Reset and ignore — was a scroll, not swipe
-      touchStartX.current = null;
-      touchStartY.current = null;
-      touchEndX.current = null;
-      touchEndY.current = null;
-      isSwiping.current = false;
+  const onDragEnd = (e) => {
+    if (!isDragging.current) {
+      setDragOffset(0);
       return;
     }
 
-    const distanceX = touchStartX.current - touchEndX.current;
+    const endX = getX(e);
+    const distance = startX.current - endX;
     const minSwipe = 50;
 
-    if (distanceX > minSwipe) goNext();
-    if (distanceX < -minSwipe) goPrev();
+    if (hasMoved.current) {
+      if (distance > minSwipe && currentIndex < imageList.length - 1) {
+        goNext();
+      } else if (distance < -minSwipe && currentIndex > 0) {
+        goPrev();
+      }
 
-    // Reset
-    touchStartX.current = null;
-    touchStartY.current = null;
-    touchEndX.current = null;
-    touchEndY.current = null;
-    isSwiping.current = false;
+      // Stop click from firing after drag
+      e.stopPropagation?.();
+    }
+
+    startX.current = null;
+    startY.current = null;
+    isDragging.current = false;
+    hasMoved.current = false;
+    setDragOffset(0);
   };
 
-  /* ── Keyboard navigation (when lightbox open) ── */
+  const onDragCancel = () => {
+    startX.current = null;
+    startY.current = null;
+    isDragging.current = false;
+    hasMoved.current = false;
+    setDragOffset(0);
+  };
+
+  /* ── Keyboard navigation ── */
   useEffect(() => {
     if (!lightboxOpen) return;
 
@@ -120,11 +142,21 @@ const ImagePost = ({ images, imageUrl, caption }) => {
           overflow: "hidden",
           background: c.skeletonBase,
           position: "relative",
-          touchAction: isCarousel ? "pan-y pinch-zoom" : "auto",
+          touchAction: isCarousel ? "pan-y" : "auto",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          cursor: isCarousel ? "grab" : "default",
         }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        // Touch events (mobile)
+        onTouchStart={onDragStart}
+        onTouchMove={onDragMove}
+        onTouchEnd={onDragEnd}
+        onTouchCancel={onDragCancel}
+        // Mouse events (desktop)
+        onMouseDown={onDragStart}
+        onMouseMove={onDragMove}
+        onMouseUp={onDragEnd}
+        onMouseLeave={onDragCancel}
       >
         {isCarousel && (
           <div
@@ -149,7 +181,10 @@ const ImagePost = ({ images, imageUrl, caption }) => {
         )}
 
         <button
-          onClick={() => setLightboxOpen(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setLightboxOpen(true);
+          }}
           style={{
             position: "absolute",
             top: "12px",
@@ -238,11 +273,19 @@ const ImagePost = ({ images, imageUrl, caption }) => {
           </button>
         )}
 
-        <CarouselImage
-          src={getImageUrl(currentImage.url)}
-          alt={caption || `Image ${currentIndex + 1}`}
-          c={c}
-        />
+        {/* Image with drag offset for visual feedback */}
+        <div
+          style={{
+            transform: `translateX(${dragOffset * 0.3}px)`,
+            transition: isDragging.current ? "none" : "transform 0.3s ease",
+          }}
+        >
+          <CarouselImage
+            src={getImageUrl(currentImage.url)}
+            alt={caption || `Image ${currentIndex + 1}`}
+            c={c}
+          />
+        </div>
 
         {isCarousel && (
           <div
@@ -263,7 +306,10 @@ const ImagePost = ({ images, imageUrl, caption }) => {
             {imageList.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => goToIndex(idx)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToIndex(idx);
+                }}
                 style={{
                   width: idx === currentIndex ? "20px" : "6px",
                   height: "6px",
@@ -297,7 +343,7 @@ const ImagePost = ({ images, imageUrl, caption }) => {
   );
 };
 
-/* ─── Carousel Image (with loading state) ─── */
+/* ─── Carousel Image ─── */
 const CarouselImage = ({ src, alt, c }) => {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -374,7 +420,7 @@ const CarouselImage = ({ src, alt, c }) => {
   );
 };
 
-/* ─── Lightbox (full screen viewer) ─── */
+/* ─── Lightbox ─── */
 const Lightbox = ({
   images,
   currentIndex,
@@ -385,52 +431,48 @@ const Lightbox = ({
   c,
 }) => {
   const current = images[currentIndex];
+  const startX = useRef(null);
+  const startY = useRef(null);
+  const hasMoved = useRef(false);
 
-  /* Touch swipe support inside lightbox too */
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
-  const isSwiping = useRef(false);
+  const getX = (e) => e.touches?.[0]?.clientX ?? e.clientX;
+  const getY = (e) => e.touches?.[0]?.clientY ?? e.clientY;
 
-  const onLightboxTouchStart = (e) => {
-    touchStartX.current = e.targetTouches[0].clientX;
-    touchStartY.current = e.targetTouches[0].clientY;
-    isSwiping.current = false;
+  const onStart = (e) => {
+    startX.current = getX(e);
+    startY.current = getY(e);
+    hasMoved.current = false;
   };
 
-  const onLightboxTouchMove = (e) => {
-    if (!touchStartX.current) return;
-    const diffX = Math.abs(e.targetTouches[0].clientX - touchStartX.current);
-    const diffY = Math.abs(e.targetTouches[0].clientY - touchStartY.current);
-    if (!isSwiping.current && diffX > 10 && diffX > diffY) {
-      isSwiping.current = true;
-    }
+  const onMove = (e) => {
+    if (startX.current === null) return;
+    const diffX = Math.abs(getX(e) - startX.current);
+    const diffY = Math.abs(getY(e) - startY.current);
+    if (diffX > 10 && diffX > diffY) hasMoved.current = true;
   };
 
-  const onLightboxTouchEnd = (e) => {
-    if (!isSwiping.current || !touchStartX.current) {
-      touchStartX.current = null;
-      touchStartY.current = null;
-      isSwiping.current = false;
+  const onEnd = (e) => {
+    if (!hasMoved.current || startX.current === null) {
+      startX.current = null;
       return;
     }
-    const endX = e.changedTouches[0].clientX;
-    const distance = touchStartX.current - endX;
-    const minSwipe = 50;
-
-    if (distance > minSwipe && currentIndex < images.length - 1) onNext();
-    if (distance < -minSwipe && currentIndex > 0) onPrev();
-
-    touchStartX.current = null;
-    touchStartY.current = null;
-    isSwiping.current = false;
+    const endX = e.changedTouches?.[0]?.clientX ?? e.clientX;
+    const distance = startX.current - endX;
+    if (distance > 50 && currentIndex < images.length - 1) onNext();
+    if (distance < -50 && currentIndex > 0) onPrev();
+    startX.current = null;
+    hasMoved.current = false;
   };
 
   return (
     <div
       onClick={onClose}
-      onTouchStart={onLightboxTouchStart}
-      onTouchMove={onLightboxTouchMove}
-      onTouchEnd={onLightboxTouchEnd}
+      onTouchStart={onStart}
+      onTouchMove={onMove}
+      onTouchEnd={onEnd}
+      onMouseDown={onStart}
+      onMouseMove={onMove}
+      onMouseUp={onEnd}
       style={{
         position: "fixed",
         inset: 0,
@@ -441,6 +483,7 @@ const Lightbox = ({
         justifyContent: "center",
         padding: "20px",
         animation: "fadeIn 0.2s ease",
+        userSelect: "none",
       }}
     >
       <button

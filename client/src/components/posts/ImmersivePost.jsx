@@ -455,89 +455,6 @@ const TextContent = ({ post }) => {
   );
 };
 
-/* ─── Image ─── */
-const ImageContent = ({ post }) => {
-  const [current, setCurrent] = useState(0);
-  const images = post.images || (post.image ? [post.image] : []);
-
-  if (images.length === 0) return null;
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "#000",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-      }}
-    >
-      <img
-        src={getImageUrl(images[current].url)}
-        alt="Post"
-        style={{
-          maxWidth: "100%",
-          maxHeight: "100%",
-          objectFit: "contain",
-        }}
-      />
-
-      {images.length > 1 && (
-        <>
-          {current > 0 && (
-            <NavBtn
-              dir="left"
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrent(current - 1);
-              }}
-            />
-          )}
-          {current < images.length - 1 && (
-            <NavBtn
-              dir="right"
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrent(current + 1);
-              }}
-            />
-          )}
-          <div
-            style={{
-              position: "absolute",
-              top: "110px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              display: "flex",
-              gap: "6px",
-              padding: "6px 12px",
-              background: "rgba(0,0,0,0.5)",
-              borderRadius: "20px",
-              backdropFilter: "blur(8px)",
-              zIndex: 5,
-            }}
-          >
-            {images.map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  width: i === current ? "20px" : "6px",
-                  height: "6px",
-                  borderRadius: "3px",
-                  background: i === current ? "#fff" : "rgba(255,255,255,0.5)",
-                  transition: "all 0.3s ease",
-                }}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
-
 const NavBtn = ({ dir, onClick }) => (
   <button
     onClick={onClick}
@@ -563,6 +480,192 @@ const NavBtn = ({ dir, onClick }) => (
     {dir === "left" ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
   </button>
 );
+
+/* ─── Image ─── */
+const ImageContent = ({ post }) => {
+  const [current, setCurrent] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const images = post.images || (post.image ? [post.image] : []);
+
+  const startX = useRef(null);
+  const startY = useRef(null);
+  const isDragging = useRef(false);
+  const hasMoved = useRef(false);
+
+  if (images.length === 0) return null;
+
+  const goTo = (index) => {
+    setCurrent(Math.max(0, Math.min(index, images.length - 1)));
+  };
+
+  const getX = (e) => {
+    if (e.touches?.[0]) return e.touches[0].clientX;
+    if (e.changedTouches?.[0]) return e.changedTouches[0].clientX;
+    return e.clientX;
+  };
+
+  const getY = (e) => {
+    if (e.touches?.[0]) return e.touches[0].clientY;
+    if (e.changedTouches?.[0]) return e.changedTouches[0].clientY;
+    return e.clientY;
+  };
+
+  const onDragStart = (e) => {
+    if (images.length <= 1) return;
+    startX.current = getX(e);
+    startY.current = getY(e);
+    isDragging.current = true;
+    hasMoved.current = false;
+  };
+
+  const onDragMove = (e) => {
+    if (!isDragging.current || startX.current === null) return;
+
+    const currentX = getX(e);
+    const currentY = getY(e);
+    const diffX = currentX - startX.current;
+    const diffY = currentY - startY.current;
+    const absX = Math.abs(diffX);
+    const absY = Math.abs(diffY);
+
+    if (absX > 10 || hasMoved.current) {
+      if (absX > absY) {
+        hasMoved.current = true;
+        if (e.cancelable) e.preventDefault();
+        setDragOffset(diffX);
+      }
+    }
+  };
+
+  const onDragEnd = (e) => {
+    if (!isDragging.current) {
+      setDragOffset(0);
+      return;
+    }
+
+    if (hasMoved.current) {
+      const endX = getX(e);
+      const distance = startX.current - endX;
+      const minSwipe = 50;
+
+      if (distance > minSwipe && current < images.length - 1) {
+        goTo(current + 1);
+      } else if (distance < -minSwipe && current > 0) {
+        goTo(current - 1);
+      }
+
+      e.stopPropagation?.();
+    }
+
+    startX.current = null;
+    startY.current = null;
+    isDragging.current = false;
+    hasMoved.current = false;
+    setDragOffset(0);
+  };
+
+  const onDragCancel = () => {
+    startX.current = null;
+    startY.current = null;
+    isDragging.current = false;
+    hasMoved.current = false;
+    setDragOffset(0);
+  };
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        background: "#000",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        touchAction: images.length > 1 ? "pan-y" : "auto",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        cursor: images.length > 1 ? "grab" : "default",
+      }}
+      onTouchStart={onDragStart}
+      onTouchMove={onDragMove}
+      onTouchEnd={onDragEnd}
+      onTouchCancel={onDragCancel}
+      onMouseDown={onDragStart}
+      onMouseMove={onDragMove}
+      onMouseUp={onDragEnd}
+      onMouseLeave={onDragCancel}
+    >
+      <img
+        src={getImageUrl(images[current].url)}
+        alt="Post"
+        draggable="false"
+        style={{
+          maxWidth: "100%",
+          maxHeight: "100%",
+          objectFit: "contain",
+          transform: `translateX(${dragOffset * 0.3}px)`,
+          transition: isDragging.current ? "none" : "transform 0.3s ease",
+          pointerEvents: "none",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+        }}
+      />
+
+      {images.length > 1 && (
+        <>
+          {current > 0 && (
+            <NavBtn
+              dir="left"
+              onClick={(e) => {
+                e.stopPropagation();
+                goTo(current - 1);
+              }}
+            />
+          )}
+          {current < images.length - 1 && (
+            <NavBtn
+              dir="right"
+              onClick={(e) => {
+                e.stopPropagation();
+                goTo(current + 1);
+              }}
+            />
+          )}
+          <div
+            style={{
+              position: "absolute",
+              top: "110px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              display: "flex",
+              gap: "6px",
+              padding: "6px 12px",
+              background: "rgba(0,0,0,0.5)",
+              borderRadius: "20px",
+              backdropFilter: "blur(8px)",
+              zIndex: 5,
+              pointerEvents: "none",
+            }}
+          >
+            {images.map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  width: i === current ? "20px" : "6px",
+                  height: "6px",
+                  borderRadius: "3px",
+                  background: i === current ? "#fff" : "rgba(255,255,255,0.5)",
+                  transition: "all 0.3s ease",
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 /* ─── Video ─── */
 const VideoContent = ({ post, isActive }) => {
