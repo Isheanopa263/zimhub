@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ImagePlus, X, MoveLeft, MoveRight } from "lucide-react";
+import { ImagePlus, Plus, X, MoveLeft, MoveRight } from "lucide-react";
 import Button from "../ui/Button";
 import useTheme from "../../hooks/useTheme";
 import toast from "react-hot-toast";
@@ -29,14 +29,12 @@ const CreateImageForm = ({ onSubmit, loading }) => {
 
     const validFiles = [];
     for (const file of newFiles) {
-      // Check file type
       const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
       if (!allowed.includes(file.type)) {
         toast.error(`"${file.name}" is not a supported image format`);
         continue;
       }
 
-      // Check file size
       if (file.size > MAX_SIZE_MB * 1024 * 1024) {
         toast.error(`"${file.name}" is larger than ${MAX_SIZE_MB}MB`);
         continue;
@@ -52,7 +50,6 @@ const CreateImageForm = ({ onSubmit, loading }) => {
     setFiles((prev) => [...prev, ...validFiles]);
   };
 
-  /* ── Remove ── */
   const removeFile = (id) => {
     setFiles((prev) => {
       const target = prev.find((f) => f.id === id);
@@ -61,7 +58,6 @@ const CreateImageForm = ({ onSubmit, loading }) => {
     });
   };
 
-  /* ── Reorder ── */
   const moveFile = (id, direction) => {
     setFiles((prev) => {
       const index = prev.findIndex((f) => f.id === id);
@@ -74,14 +70,12 @@ const CreateImageForm = ({ onSubmit, loading }) => {
     });
   };
 
-  /* ── Clear All ── */
   const clearAll = () => {
     files.forEach((f) => URL.revokeObjectURL(f.preview));
     setFiles([]);
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  /* ── Submit ── */
   const handleSubmit = () => {
     if (files.length === 0) {
       toast.error("Please add at least one image");
@@ -89,8 +83,6 @@ const CreateImageForm = ({ onSubmit, loading }) => {
     }
 
     const formData = new FormData();
-
-    // Field name MUST match backend: uploadMultipleImages.array('images', 10)
     files.forEach(({ file }) => {
       formData.append("images", file);
     });
@@ -102,7 +94,6 @@ const CreateImageForm = ({ onSubmit, loading }) => {
     onSubmit(formData);
   };
 
-  /* ── Drag & Drop ── */
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
@@ -126,69 +117,85 @@ const CreateImageForm = ({ onSubmit, loading }) => {
 
       {/* Image Previews Grid */}
       {files.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              files.length === 1
-                ? "1fr"
-                : "repeat(auto-fill, minmax(140px, 1fr))",
-            gap: "8px",
-            marginBottom: "14px",
-          }}
-        >
-          {files.map((item, idx) => (
-            <ImagePreview
-              key={item.id}
-              preview={item.preview}
-              index={idx}
-              total={files.length}
-              onRemove={() => removeFile(item.id)}
-              onMoveUp={() => moveFile(item.id, "up")}
-              onMoveDown={() => moveFile(item.id, "down")}
-              isSingle={files.length === 1}
-              c={c}
-            />
-          ))}
+        <>
+          {/* Single image — full width preview */}
+          {files.length === 1 ? (
+            <div style={{ marginBottom: "10px" }}>
+              <ImagePreview
+                preview={files[0].preview}
+                index={0}
+                total={1}
+                onRemove={() => removeFile(files[0].id)}
+                isSingle
+                c={c}
+              />
+            </div>
+          ) : (
+            /* Multi image — grid layout */
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "6px",
+                marginBottom: "10px",
+              }}
+            >
+              {files.map((item, idx) => (
+                <ImagePreview
+                  key={item.id}
+                  preview={item.preview}
+                  index={idx}
+                  total={files.length}
+                  onRemove={() => removeFile(item.id)}
+                  onMoveUp={() => moveFile(item.id, "up")}
+                  onMoveDown={() => moveFile(item.id, "down")}
+                  isSingle={false}
+                  c={c}
+                />
+              ))}
+            </div>
+          )}
 
-          {/* Add more button */}
+          {/* Small "Add More" button — separate row */}
           {files.length < MAX_IMAGES && (
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               style={{
-                aspectRatio: "1",
-                border: `2px dashed ${c.borderStrong}`,
-                borderRadius: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 14px",
+                borderRadius: "10px",
+                border: `1px dashed ${c.borderStrong}`,
                 background: c.bgSubtle,
                 cursor: "pointer",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                color: c.textMuted,
+                color: c.textTer,
                 fontSize: "12px",
+                fontWeight: 600,
                 fontFamily: "Inter, sans-serif",
+                marginBottom: "14px",
                 transition: "all 0.15s ease",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = c.accent;
                 e.currentTarget.style.color = c.accent;
+                e.currentTarget.style.background = c.accentLight;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = c.borderStrong;
-                e.currentTarget.style.color = c.textMuted;
+                e.currentTarget.style.color = c.textTer;
+                e.currentTarget.style.background = c.bgSubtle;
               }}
             >
-              <ImagePlus size={24} />
-              Add more
+              <Plus size={14} />
+              Add more images
             </button>
           )}
-        </div>
+        </>
       )}
 
-      {/* Upload area (when no files) */}
+      {/* Upload area (only when no files) */}
       {files.length === 0 && (
         <div
           onClick={() => fileRef.current?.click()}
@@ -299,6 +306,7 @@ const CreateImageForm = ({ onSubmit, loading }) => {
           fontFamily: "Inter, sans-serif",
           outline: "none",
           marginBottom: "14px",
+          boxSizing: "border-box",
         }}
         onFocus={(e) => (e.target.style.borderColor = c.accent)}
         onBlur={(e) => (e.target.style.borderColor = c.borderStrong)}
@@ -336,11 +344,12 @@ const ImagePreview = ({
   <div
     style={{
       position: "relative",
-      aspectRatio: isSingle ? "auto" : "1",
+      aspectRatio: isSingle ? "16/10" : "1",
       borderRadius: "12px",
       overflow: "hidden",
       background: c.skeletonBase,
       border: `1px solid ${c.border}`,
+      maxHeight: isSingle ? "300px" : "auto",
     }}
   >
     <img
@@ -348,12 +357,32 @@ const ImagePreview = ({
       alt={`Preview ${index + 1}`}
       style={{
         width: "100%",
-        height: isSingle ? "auto" : "100%",
-        maxHeight: isSingle ? "300px" : "100%",
+        height: "100%",
         objectFit: "cover",
         display: "block",
       }}
     />
+
+    {/* Order badge for multi-images */}
+    {total > 1 && (
+      <div
+        style={{
+          position: "absolute",
+          top: "6px",
+          left: "6px",
+          background: "rgba(0,0,0,0.7)",
+          color: "#fff",
+          fontSize: "10px",
+          fontWeight: 700,
+          padding: "2px 6px",
+          borderRadius: "10px",
+          backdropFilter: "blur(4px)",
+          fontFamily: "Inter, sans-serif",
+        }}
+      >
+        {index + 1}
+      </div>
+    )}
 
     {/* Actions */}
     <div

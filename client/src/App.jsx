@@ -19,12 +19,16 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 
 import useAuthStore from "./store/authStore";
 import useNotificationStore from "./store/notificationStore";
+import useBackHandler from "./hooks/useBackHandler";
 import { authApi } from "./api/endpoints/auth.api";
 import { notificationsApi } from "./api/endpoints/notifications.api";
 
 const App = () => {
   const { isAuthenticated, setUser, logout } = useAuthStore();
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
+
+  /* Global back button handler */
+  useBackHandler();
 
   useEffect(() => {
     const initialize = async () => {

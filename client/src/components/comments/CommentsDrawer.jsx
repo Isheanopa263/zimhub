@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import useComments from "../../hooks/useComments";
 import useTheme from "../../hooks/useTheme";
@@ -7,6 +7,7 @@ import CommentInput from "./CommentInput";
 
 const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
   const { c } = useTheme();
+  const drawerRef = useRef(null);
   const {
     comments,
     loading,
@@ -18,7 +19,7 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
     deleteComment,
   } = useComments(postId, isOpen);
 
-  /* Lock body scroll when drawer is open */
+  /* Lock body scroll */
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => {
@@ -26,18 +27,30 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
     };
   }, [isOpen]);
 
-  /* Sync comment count back to PostCard */
+  /* Sync count back to PostCard */
   useEffect(() => {
     if (onCommentChange && totalCount >= 0) {
       onCommentChange(totalCount);
     }
   }, [totalCount, onCommentChange]);
 
-  const handleSubmit = async (content) => await createComment(content, null);
+  /* Listen for back-button close request from useBackHandler */
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = drawerRef.current;
+    if (!el) return;
 
+    const handleCloseRequest = () => onClose();
+    el.addEventListener("modal-close-request", handleCloseRequest);
+
+    return () => {
+      el.removeEventListener("modal-close-request", handleCloseRequest);
+    };
+  }, [isOpen, onClose]);
+
+  const handleSubmit = async (content) => await createComment(content, null);
   const handleReply = async (parentId, content) =>
     await createComment(content, parentId);
-
   const handleDelete = async (id, wasReply, parentId) =>
     await deleteComment(id, wasReply, parentId);
 
@@ -45,7 +58,6 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
@@ -58,8 +70,9 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
         }}
       />
 
-      {/* Drawer */}
       <div
+        ref={drawerRef}
+        data-modal-open="true"
         style={{
           position: "fixed",
           bottom: 0,
@@ -76,7 +89,6 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           animation: "slideUp 0.3s ease",
         }}
       >
-        {/* Drag handle */}
         <div
           style={{
             width: "40px",
@@ -88,7 +100,6 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           }}
         />
 
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -143,7 +154,6 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           </button>
         </div>
 
-        {/* Comments list */}
         <div style={{ flex: 1, overflow: "auto" }}>
           <CommentsList
             comments={comments}
@@ -155,7 +165,6 @@ const CommentsDrawer = ({ isOpen, onClose, postId, onCommentChange }) => {
           />
         </div>
 
-        {/* Comment input */}
         <CommentInput
           onSubmit={handleSubmit}
           submitting={submitting}
