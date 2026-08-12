@@ -149,9 +149,9 @@ const SupportPage = () => {
           icon={MessageCircle}
           iconColor={c.accent}
           iconBg={c.accentLight}
-          title="Send a Query"
+          title="Send an Issue"
           description="Get private support from admins. They'll reply directly to you."
-          buttonText="New Query"
+          buttonText="New Issue"
           onClick={() => setQueryModalOpen(true)}
         />
 
@@ -181,7 +181,7 @@ const SupportPage = () => {
             gap: "8px",
           }}
         >
-          My Queries
+          My Issues
           {queries.length > 0 && (
             <span
               style={{
@@ -564,7 +564,7 @@ const EmptyState = ({ c, onCreate, filter }) => (
         margin: "0 0 6px",
       }}
     >
-      {filter === "all" ? "No queries yet" : `No ${filter} queries`}
+      {filter === "all" ? "No issues yet" : `No ${filter} issues`}
     </h3>
     <p
       style={{
@@ -575,7 +575,7 @@ const EmptyState = ({ c, onCreate, filter }) => (
     >
       {filter === "all"
         ? "Get help or report issues to the admin team"
-        : "Try changing the filter to see other queries"}
+        : "Try changing the filter to see other issues"}
     </p>
     {filter === "all" && (
       <button
@@ -593,7 +593,7 @@ const EmptyState = ({ c, onCreate, filter }) => (
           boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)",
         }}
       >
-        Create First Query
+        Write First Issue
       </button>
     )}
   </div>

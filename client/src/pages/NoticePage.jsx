@@ -20,7 +20,7 @@ const TABS = [
   { key: "all", label: "All", icon: Inbox },
   { key: "active", label: "Active", icon: CheckCircle2 },
   { key: "closed", label: "Closed", icon: XCircle },
-  { key: "mine", label: "My Notices", icon: User },
+  { key: "mine", label: "My Adverts", icon: User },
 ];
 
 const NoticePage = () => {
@@ -103,7 +103,7 @@ const NoticePage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this notice? This cannot be undone.")) return;
+    if (!window.confirm("Delete this advert? This cannot be undone.")) return;
     await removeNotice(id);
   };
 
@@ -133,7 +133,7 @@ const NoticePage = () => {
                 margin: 0,
               }}
             >
-              📋 Notice Board
+              📋 Adverts
             </h1>
             <p
               style={{
@@ -143,7 +143,7 @@ const NoticePage = () => {
                 fontFamily: "Inter, sans-serif",
               }}
             >
-              Community notices & opportunities
+              Business Adverts & Opportunities
             </p>
           </div>
 
@@ -166,7 +166,7 @@ const NoticePage = () => {
             }}
           >
             <Plus size={16} strokeWidth={2.5} />
-            Post Notice
+            Post Advert
           </button>
         </div>
 
@@ -192,7 +192,7 @@ const NoticePage = () => {
             type="search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search notices..."
+            placeholder="Search adverts..."
             style={{
               width: "100%",
               padding: "11px 14px 11px 40px",
@@ -337,7 +337,7 @@ const NoticePage = () => {
                 fontSize: "13px",
               }}
             >
-              ✓ End of notices
+              ✓ End of adverts
             </div>
           )}
         </>
@@ -404,22 +404,22 @@ const EmptyState = ({ searchQuery, activeTab, onCreateClick, c }) => {
   const emptyByTab = {
     all: {
       icon: "📋",
-      title: "No notices yet",
-      sub: "Be the first to post a notice!",
+      title: "No adverts yet",
+      sub: "Be the first to post an advert!",
     },
     active: {
       icon: "✅",
-      title: "No active notices",
-      sub: "All current notices are closed",
+      title: "No active adverts",
+      sub: "All current adverts are closed",
     },
     closed: {
       icon: "🔒",
-      title: "No closed notices",
-      sub: "No notices have been closed",
+      title: "No closed adverts",
+      sub: "No adverts have been closed",
     },
     mine: {
       icon: "👤",
-      title: "You haven't posted any notices",
+      title: "You haven't posted any adverts",
       sub: "Share something with the community",
     },
   };
@@ -474,7 +474,7 @@ const EmptyState = ({ searchQuery, activeTab, onCreateClick, c }) => {
             boxShadow: "0 4px 14px rgba(59,130,246,0.3)",
           }}
         >
-          Post Your First Notice
+          Post Your First Advert
         </button>
       )}
     </div>

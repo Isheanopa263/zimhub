@@ -5,7 +5,7 @@ import useTheme from "../../hooks/useTheme";
 const navItems = [
   { to: "/feed", icon: Home, label: "Feed" },
   { to: "/search", icon: Search, label: "Search" },
-  { to: "/notices", icon: ClipboardList, label: "Notices" },
+  { to: "/notices", icon: ClipboardList, label: "Adverts" },
   { to: "/notifications", icon: Bell, label: "Alerts", badge: true },
   { to: "/profile", icon: User, label: "Profile" },
 ];

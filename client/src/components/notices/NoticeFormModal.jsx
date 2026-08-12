@@ -108,17 +108,17 @@ const NoticeFormModal = ({
       let response;
       if (isEditMode) {
         response = await noticesApi.update(editingNotice.id, formData);
-        toast.success("Notice updated!");
+        toast.success("Advert updated!");
       } else {
         response = await noticesApi.create(formData);
-        toast.success("Notice posted! 📢");
+        toast.success("Advert posted! 📢");
       }
 
       onSuccess?.(response.data);
       resetForm();
       onClose();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to save notice");
+      toast.error(error?.response?.data?.message || "Failed to save advert");
     } finally {
       setLoading(false);
     }
@@ -199,7 +199,7 @@ const NoticeFormModal = ({
               fontFamily: "Inter, sans-serif",
             }}
           >
-            {isEditMode ? "Edit Notice" : "Post a Notice"}
+            {isEditMode ? "Edit Advert" : "Post an Advert"}
           </h2>
           <button
             onClick={handleClose}
@@ -445,8 +445,8 @@ const NoticeFormModal = ({
                 ? "Updating..."
                 : "Posting..."
               : isEditMode
-                ? "Update Notice"
-                : "Post Notice"}
+                ? "Update Advert"
+                : "Post Advert"}
           </button>
         </form>
 

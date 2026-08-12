@@ -25,7 +25,7 @@ import AboutModal from "../modals/AboutModal";
 const navItems = [
   { to: "/feed", icon: Home, label: "Feed" },
   { to: "/search", icon: Search, label: "Search" },
-  { to: "/notices", icon: ClipboardList, label: "Notice Board" },
+  { to: "/notices", icon: ClipboardList, label: "Adverts" },
   { to: "/notifications", icon: Bell, label: "Notifications", badge: true },
   { to: "/profile", icon: User, label: "My Profile" },
 ];
