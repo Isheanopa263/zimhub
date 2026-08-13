@@ -69,20 +69,6 @@ const cleanupOldPosts = async () => {
   }
 };
 
-const cleanupExpiredOTPs = async () => {
-  try {
-    const result = await query(
-      `DELETE FROM otp_codes WHERE expires_at < NOW() - INTERVAL '1 hour'`,
-    );
-    if (result.rowCount > 0) {
-      console.log(`🧹 Removed ${result.rowCount} expired OTPs`);
-    }
-    return result.rowCount;
-  } catch {
-    return 0;
-  }
-};
-
 const cleanupExpiredSessions = async () => {
   try {
     const result = await query(
@@ -114,7 +100,6 @@ const cleanupOldNotifications = async () => {
 
 const runAllCleanup = async () => {
   const postsResult = await cleanupOldPosts();
-  await cleanupExpiredOTPs();
   await cleanupExpiredSessions();
   await cleanupOldNotifications();
   return postsResult;
@@ -125,7 +110,7 @@ const runAllCleanup = async () => {
  *
  * - Startup (30s delay): Catches missed cleanups from server downtime
  * - Every 6 hours: Full cleanup
- * - Every hour: Quick OTP/session cleanup
+ * - Every hour: Quick session cleanup
  */
 const initCleanupJobs = () => {
   console.log(
@@ -144,16 +129,14 @@ const initCleanupJobs = () => {
     await runAllCleanup();
   });
 
-  // Every hour: lightweight OTP/session cleanup
+  // Every hour: lightweight session cleanup
   cron.schedule("0 * * * *", async () => {
-    await cleanupExpiredOTPs();
     await cleanupExpiredSessions();
   });
 };
 
 module.exports = {
   cleanupOldPosts,
-  cleanupExpiredOTPs,
   cleanupExpiredSessions,
   cleanupOldNotifications,
   runAllCleanup,
