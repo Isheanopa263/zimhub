@@ -8,6 +8,11 @@ const { getAuditLogs } = require("../../utils/auditLog");
 const validate = require("../../middleware/validate");
 const { stats: cacheStats, flush: cacheFlush } = require("../../utils/cache");
 
+const { runR2Diagnostic } = require("./r2-test");
+
+// Diagnostic — admin only
+router.get("/r2-diagnostic", authenticate, requireAdmin, runR2Diagnostic);
+
 // ALL routes require admin
 router.use(authenticate);
 router.use(requireAdmin);
